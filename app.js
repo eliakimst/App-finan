@@ -82,7 +82,7 @@ function ocorrenciasRec(st, ateA, ateM) {
       const ym = ymStr(a, m);
       if (r.fim && ym > r.fim) break;
       if (!(r.pular || []).includes(ym)) {
-        out.push({ ...r, id: `rec:${r.id}:${ym}`, recId: r.id, data: `${ym}-${pad(Math.min(dia, diasNoMes(a, m)))}` });
+        out.push({ ...r, id: `rec:${r.id}:${ym}`, recId: r.id, previsto: r.tipo === 'saida', data: `${ym}-${pad(Math.min(dia, diasNoMes(a, m)))}` });
       }
       [a, m] = addMes(a, m, 1);
     }
@@ -215,15 +215,16 @@ function renderMes() {
   const de = `${ym}-01` < ini ? ini : `${ym}-01`;
   const { neg } = de <= sobraD ? C.analisar(de, sobraD) : { neg: null };
   $('#alerta').innerHTML = neg ? `<div class="alerta">🚨 Saldo fica negativo em ${dm(neg.data)} (${fmt(neg.valor)})</div>` : '';
+  renderPendentes();
 
-  let ent = 0, sai = 0, inv = 0;
+  let ent = 0, sai = 0, inv = 0, prevMes = 0;
   const dias = [...C.porDia.keys()].filter(d => d.startsWith(ym)).sort();
   for (const d of dias) {
     if (d < ini) continue;
     const o = C.porDia.get(d);
     for (const l of o.itens) {
       if (l.tipo === 'entrada') ent += l.valor;
-      if (l.tipo === 'saida') sai += l.valor;
+      if (l.tipo === 'saida') { sai += l.valor; if (l.previsto) prevMes += l.valor; }
       if (l.tipo === 'investimento') inv += l.valor;
     }
     for (const v of Object.values(o.faturas)) sai += v;
@@ -233,7 +234,7 @@ function renderMes() {
       <div><span class="ic">💰</span><small>Entradas</small><b class="num pos">${fmt(ent)}</b></div>
       <div><span class="ic">💸</span><small>Saídas</small><b class="num">${fmt(sai)}</b></div>
       <div><span class="ic">🏦</span><small>Saldo final</small><b class="num ${sFim < 0 ? 'neg' : ''}">${sFim == null ? '—' : fmt(sFim)}</b></div>
-    </div>${inv ? `<p class="hint" style="margin:-12px 0 20px;text-align:center">🌱 Investido no mês: <b class="pos">${fmt(inv)}</b></p>` : ''}`;
+    </div>${inv || prevMes ? `<p class="hint" style="margin:-12px 0 20px;text-align:center">${inv ? `🌱 Investido no mês: <b class="pos">${fmt(inv)}</b>` : ''}${inv && prevMes ? ' · ' : ''}${prevMes ? `🕒 Saídas previstas: <b>${fmt(prevMes)}</b>` : ''}</p>` : ''}`;
 
   const fats = [];
   for (const [d, o] of C.porDia) {
@@ -258,9 +259,10 @@ function renderMes() {
       const sinal = l.tipo === 'entrada' ? '+' : l.tipo === 'cartao' ? '' : '−';
       const cart = S.cartoes.find(c => c.id === l.cartao);
       const sub = l.tipo === 'cartao' ? `${nomeCartao(l.cartao)}${cart ? ' · fatura ' + dm(vencimento(l.data, cart)) : ''}` : (l.descricao ? ROTULO[l.tipo] : '');
-      return `<div class="linha click" data-id="${esc(l.id)}">
-        <div class="esq"><span class="av ${l.tipo}">${EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}${l.recId ? ' 🔁' : ''}</div>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
-        <div class="dir num ${l.tipo === 'entrada' || l.tipo === 'investimento' ? 'pos' : ''}" style="${l.tipo === 'cartao' ? 'color:var(--roxo)' : ''}">${sinal}${fmt(l.valor)}</div></div>`;
+      const prev = l.tipo === 'saida' && l.previsto;
+      return `<div class="linha click ${prev ? 'previsto' : ''}" data-id="${esc(l.id)}">
+        <div class="esq"><span class="av ${l.tipo}">${prev ? '🕒' : EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}${l.recId || l.deRec ? ' 🔁' : ''}</div>${prev ? '<small><span class="selo">previsto</span></small>' : l.tipo === 'saida' && (l.deRec || l.confirmado) ? '<small><span class="selo ok">pago ✓</span></small>' : sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
+        <div class="dir num ${l.tipo === 'entrada' || l.tipo === 'investimento' ? 'pos' : ''}" style="${l.tipo === 'cartao' ? 'color:var(--roxo)' : ''}">${sinal}${fmt(l.valor)}${prev ? `<button class="mini" data-conf="${esc(l.id)}">Confirmar</button>` : ''}</div></div>`;
     }).join('');
     const fts = Object.entries(o.faturas).map(([c, v]) => `
       <div class="linha"><div class="esq"><span class="av fatura">🧾</span><div><div class="t">Fatura ${esc(nomeCartao(c))}</div><small>pagamento</small></div></div>
@@ -269,6 +271,7 @@ function renderMes() {
   }).join('');
 
   $$('#dias .linha.click').forEach(el => el.onclick = () => abrirLanc(el.dataset.id, C.lancs));
+  $$('[data-conf]').forEach(b => b.onclick = e => { e.stopPropagation(); abrirConfirmar(b.dataset.conf, C.lancs); });
 }
 
 /* ---------------- Tela: Posso gastar? ---------------- */
@@ -547,6 +550,7 @@ function estadoDoForm() {
   const tipo = fl.tipo.value;
   const base = { tipo, valor, descricao: fl.descricao.value.trim(), cartao: tipo === 'cartao' ? fl.cartao.value : undefined };
   const st = structuredClone(S);
+  const original = editando?.id ? S.lancs.find(l => l.id === editando.id) : null;
   if (editando?.id) st.lancs = st.lancs.filter(l => l.id !== editando.id);
   const recAnt = editando?.recId ? st.recs.find(r => r.id === editando.recId) : null;
   if (recAnt && !fl.recorrente.checked) st.recs = st.recs.filter(r => r.id !== recAnt.id);
@@ -556,6 +560,8 @@ function estadoDoForm() {
     if (recAnt) Object.assign(recAnt, novo); else st.recs.push({ id: uid(), ...novo });
   } else {
     novo = { id: editando?.id || uid(), ...base, data: fl.data.value };
+    if (tipo === 'saida') novo.previsto = fl.previsto.checked;
+    if (original?.deRec) { novo.deRec = original.deRec; novo.deYm = original.deYm; }
     st.lancs.push(novo);
   }
   return { st, base, recAnt };
@@ -564,6 +570,8 @@ function estadoDoForm() {
 function atualizarImpacto() {
   $('#campo-cartao').hidden = fl.tipo.value !== 'cartao';
   $('#campo-fim').hidden = !fl.recorrente.checked;
+  $('#campo-previsto').hidden = fl.tipo.value !== 'saida' || fl.recorrente.checked;
+  $('#nota-rec-prev').hidden = !(fl.tipo.value === 'saida' && fl.recorrente.checked);
   const r = estadoDoForm();
   if (!r) { $('#impacto').innerHTML = ''; return; }
   const { st, base } = r;
@@ -591,6 +599,9 @@ function atualizarImpacto() {
   </div>`;
 }
 fl.addEventListener('input', atualizarImpacto);
+let previstoTocado = false;
+fl.previsto.addEventListener('change', () => { previstoTocado = true; });
+fl.data.addEventListener('change', () => { if (!previstoTocado && !editando) fl.previsto.checked = fl.data.value > hojeStr(); });
 fl.addEventListener('change', atualizarImpacto);
 
 function abrirLanc(id, lista) {
@@ -606,6 +617,7 @@ function abrirLanc(id, lista) {
     fl.tipo.value = l.tipo;
     fl.valor.value = brNum(l.valor);
     fl.descricao.value = l.descricao || '';
+    fl.previsto.checked = !!l.previsto;
     if (l.cartao) fl.cartao.value = l.cartao;
     if (l.recId) {
       const r = S.recs.find(x => x.id === l.recId);
@@ -620,7 +632,9 @@ function abrirLanc(id, lista) {
   } else {
     const h = hojeStr();
     fl.data.value = h.startsWith(ymStr(verA, verM)) ? h : `${ymStr(verA, verM)}-01`;
+    fl.previsto.checked = fl.data.value > h;
   }
+  previstoTocado = false;
   atualizarImpacto();
   dlg.showModal();
   if (!l) fl.valor.focus();
@@ -637,7 +651,11 @@ $('#dlg-excluir').onclick = () => {
   if (editando.recId) {
     if (!confirm('Excluir esta recorrência em todos os meses?')) return;
     S.recs = S.recs.filter(r => r.id !== editando.recId);
-  } else S.lancs = S.lancs.filter(l => l.id !== editando.id);
+  } else {
+    const l = S.lancs.find(x => x.id === editando.id);
+    if (l?.deRec) { const r = S.recs.find(x => x.id === l.deRec); if (r) r.pular = (r.pular || []).filter(y => y !== l.deYm); }
+    S.lancs = S.lancs.filter(x => x.id !== editando.id);
+  }
   dlg.close(); salvar();
 };
 fl.onsubmit = e => {
@@ -648,6 +666,60 @@ fl.onsubmit = e => {
   if (!r.recAnt) [verA, verM] = fl.data.value.split('-').map(Number);
   dlg.close(); salvar();
 };
+
+/* ---------------- Confirmar pagamento ---------------- */
+const dc = $('#dlg-conf'), fcf = $('#form-conf');
+let confItem = null;
+function abrirConfirmar(id, lista) {
+  const l = (lista || S.lancs).find(x => x.id === id); if (!l) return;
+  confItem = l;
+  $('#conf-desc').textContent = l.descricao || 'Saída';
+  $('#conf-prev').textContent = `Previsto: ${fmt(l.valor)} em ${dm(l.data)}`;
+  fcf.valor.value = brNum(l.valor);
+  fcf.data.value = l.data > hojeStr() ? hojeStr() : l.data;
+  atualizarConf();
+  dc.showModal();
+  fcf.valor.select();
+}
+function atualizarConf() {
+  const v = parseNum(fcf.valor.value);
+  const dif = v - confItem.valor;
+  $('#conf-dif').innerHTML = !(v >= 0) ? '' : Math.abs(dif) < 0.005 ? '👌 Igual ao previsto'
+    : dif > 0 ? `<span class="neg">😕 ${fmt(dif)} a mais que o previsto</span>` : `<span class="pos">🎉 ${fmt(-dif)} a menos que o previsto</span>`;
+}
+fcf.addEventListener('input', atualizarConf);
+$('#conf-cancelar').onclick = () => dc.close();
+fcf.onsubmit = e => {
+  e.preventDefault();
+  const v = parseNum(fcf.valor.value);
+  if (!(v >= 0) || !fcf.data.value) return alert('Informe o valor pago');
+  const l = confItem;
+  if (l.recId) {
+    const r = S.recs.find(x => x.id === l.recId);
+    const ym = l.data.slice(0, 7);
+    r.pular = [...new Set([...(r.pular || []), ym])];
+    if (v > 0) S.lancs.push({ id: uid(), tipo: 'saida', valor: v, descricao: r.descricao, data: fcf.data.value, previsto: false, deRec: r.id, deYm: ym });
+  } else {
+    const a = S.lancs.find(x => x.id === l.id);
+    if (v > 0) Object.assign(a, { valor: v, data: fcf.data.value, previsto: false, confirmado: true });
+    else S.lancs = S.lancs.filter(x => x.id !== l.id);
+  }
+  dc.close(); salvar();
+};
+function pendentes() {
+  const d = new Date();
+  const C = calcular(S, d.getFullYear(), d.getMonth() + 1);
+  const h = hojeStr(), ini = S.saldoInicial.data;
+  return { C, lista: C.lancs.filter(l => l.tipo === 'saida' && l.previsto && l.data <= h && l.data >= ini).sort((a, b) => a.data.localeCompare(b.data)) };
+}
+function renderPendentes() {
+  const { C, lista } = pendentes();
+  $('#pendentes').innerHTML = !lista.length ? '' : `<div class="cartao-bloco pend"><h2>🔔 Para confirmar (${lista.length})</h2>
+    <p class="hint" style="margin-top:-6px">Saídas previstas que já venceram. Confirme o valor que foi pago de verdade.</p>
+    ${lista.map(l => `<div class="linha"><div class="esq"><span class="av saida">🕒</span><div style="min-width:0"><div class="t">${esc(l.descricao || 'Saída')}</div><small>${dm(l.data)} · previsto ${fmt(l.valor)}</small></div></div>
+      <div class="dir"><button class="mini forte" data-pend="${esc(l.id)}">Confirmar</button></div></div>`).join('')}</div>`;
+  $$('[data-pend]').forEach(b => b.onclick = () => abrirConfirmar(b.dataset.pend, C.lancs));
+}
 
 /* ---------------- Render ---------------- */
 function render() {

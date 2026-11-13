@@ -179,3 +179,14 @@ table.tab th { color: var(--muted); font-weight: 700; font-size: .74rem; }
 table.tab th, table.tab td { padding: 9px 2px; text-align: right; border-bottom: 1px dashed var(--line); }
 table.tab th:first-child, table.tab td:first-child { text-align: left; }
 .scroll { max-height: 380px; overflow: auto; }
+
+/* previstos */
+.selo { display: inline-block; background: var(--amarelo-soft); color: var(--warn, #b26a00); font-size: .7rem; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+.selo.ok { background: var(--acc-soft); color: var(--acc); }
+.linha.previsto .dir { color: var(--muted); }
+.linha.previsto .av { background: var(--amarelo-soft); }
+.mini { display: block; margin: 4px 0 0 auto; background: var(--sup); color: var(--txt); font-size: .72rem; font-weight: 800; padding: 5px 10px; }
+.mini.forte { background: linear-gradient(135deg, var(--acc), var(--acc-2)); color: #fff; margin: 0; padding: 8px 14px; font-size: .8rem; }
+.pend { border: 2px solid var(--amarelo); }
+:root { --warn: #b26a00; }
+@media (prefers-color-scheme: dark) { :root { --warn: #ffc04d; } }

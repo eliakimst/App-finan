@@ -24,6 +24,7 @@
     </div>
     <div id="hero"></div>
     <div id="alerta"></div>
+    <div id="pendentes"></div>
     <div id="numeros"></div>
     <div id="faturas"></div>
     <div id="dias"></div>
@@ -169,7 +170,9 @@
       <label>Data<input type="date" name="data" required></label>
       <label>Descrição<input name="descricao" autocomplete="off" placeholder="opcional"></label>
     </div>
+    <label class="check" id="campo-previsto"><input type="checkbox" name="previsto"> 🕒 Valor previsto (ainda não foi pago)</label>
     <label class="check"><input type="checkbox" name="recorrente"> Repetir todo mês</label>
+    <p class="hint" id="nota-rec-prev" hidden>🕒 Saídas que se repetem entram como previstas. No dia do pagamento, confirme o valor real.</p>
     <label id="campo-fim" hidden>Até (opcional)<input type="month" name="fim"></label>
 
     <div id="impacto"></div>
@@ -179,6 +182,23 @@
       <button type="button" id="dlg-excluir" class="link-perigo" hidden>Excluir</button>
       <button type="submit" class="primario" id="dlg-salvar">Salvar</button>
     </div>
+  </form>
+</dialog>
+
+<!-- Confirmar pagamento -->
+<dialog id="dlg-conf">
+  <form id="form-conf" method="dialog" class="form">
+    <div class="dlg-head">
+      <h2>✅ Confirmar pagamento</h2>
+      <button type="button" class="x" id="conf-cancelar" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <p style="margin:0;font-weight:800" id="conf-desc"></p>
+    <p class="hint" id="conf-prev"></p>
+    <label>Valor pago<input class="valor-grande" inputmode="decimal" name="valor" required autocomplete="off"></label>
+    <p class="hint" id="conf-dif" style="text-align:center;font-weight:700;margin-top:-6px"></p>
+    <label>Data do pagamento<input type="date" name="data" required></label>
+    <p class="hint">Valor 0 = não houve pagamento neste mês.</p>
+    <button type="submit" class="primario">Confirmar</button>
   </form>
 </dialog>
 
