@@ -197,6 +197,14 @@ function humor(v) {
   return { c: '', t: 'Sobra para aplicar', st: 'Tudo certo' };
 }
 function renderMes() {
+  const vazio = !S.lancs.length && !S.recs.length;
+  $('#boas-vindas').innerHTML = !vazio ? '' : `<div class="cartao-bloco" style="text-align:center;padding:20px 16px">
+      <h2 style="font-size:20px">Bem-vindo ao Posso gastar?</h2>
+      <p class="hint" style="margin:6px 0 16px">Ainda não há dados neste aparelho. Importe o arquivo de backup (.json) ou comece a lançar.</p>
+      <button class="primario" id="bv-importar">Importar backup</button>
+      <button class="secundario" id="bv-lancar" style="margin-top:8px">Lançar manualmente</button>
+    </div>`;
+  if (vazio) { $('#bv-importar').onclick = () => $('#importar').click(); $('#bv-lancar').onclick = () => abrirLanc(null); }
   $('#mes-nome').textContent = `${MESES[verM - 1]} ${verA}`;
   const [na, nm] = addMes(verA, verM, 1);
   const C = calcular(S, na, nm);
@@ -621,8 +629,11 @@ $('#importar').onchange = async e => {
   try {
     const d = JSON.parse(await file.text());
     if (!d || !Array.isArray(d.lancs) || !Array.isArray(d.cartoes) || !d.saldoInicial) throw new Error('arquivo não parece um backup deste app');
-    if (!confirm('Substituir todos os dados atuais pelo backup?')) return;
+    if ((S.lancs.length || S.recs.length) && !confirm('Substituir todos os dados atuais pelo backup?')) return;
     S = migrar(d); salvar();
+    { const d0 = new Date(); verA = d0.getFullYear(); verM = d0.getMonth() + 1; }
+    $('.tabs button[data-tela="mes"]').click();
+    alert(`Backup importado: ${S.lancs.length} lançamentos e ${S.recs.length} recorrências.`);
   } catch (err) { alert('Erro ao importar: ' + err.message); }
   e.target.value = '';
 };
