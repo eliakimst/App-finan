@@ -1,4 +1,4 @@
-const CACHE = 'posso-gastar-v2';
+const CACHE = 'posso-gastar-v3';
 const FILES = ['./', './index.html', './app.js', './style.css', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))));
 self.addEventListener('activate', e => e.waitUntil(

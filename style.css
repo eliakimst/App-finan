@@ -129,11 +129,13 @@ button:active, .btn:active { opacity: .55; }
 .form input:focus, .form select:focus { box-shadow: 0 0 0 2px var(--tint); }
 .form select { background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
 .form label.check { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--txt); font-size: 17px; padding: 6px 0; }
-/* interruptor estilo iOS */
-.form label.check input { order: 2; flex: none; width: 51px; height: 31px; margin: 0; padding: 0; border-radius: 999px; background: var(--sup); position: relative; transition: background .2s; cursor: pointer; box-shadow: none; }
-.form label.check input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.16); transition: transform .2s; }
-.form label.check input:checked { background: var(--acc); }
-.form label.check input:checked::after { transform: translateX(20px); }
+/* interruptor estilo iOS (span, pois o Safari não desenha ::after em checkbox) */
+.form label.check input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.sw { flex: none; position: relative; width: 51px; height: 31px; border-radius: 999px; background: var(--sup); transition: background .2s; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.16); transition: transform .2s; }
+.form label.check input:checked + .sw { background: var(--acc); }
+.form label.check input:checked + .sw::after { transform: translateX(20px); }
+.form label.check input:focus-visible + .sw { box-shadow: 0 0 0 2px var(--tint); }
 .row2 { display: flex; gap: 10px; } .row2 > * { flex: 1; min-width: 0; }
 
 /* ---------- controle segmentado ---------- */
@@ -230,3 +232,41 @@ body.travado main, body.travado .tabs { visibility: hidden; }
 .teclado button:active { background: var(--sep); opacity: 1; }
 .teclado button.txt { background: none; font-size: 17px; color: var(--txt); }
 .lk-esqueci { margin-top: 26px; font-size: 15px; }
+
+/* ---------- ajustes de encaixe (telas estreitas e Safari) ---------- */
+html, body { overflow-x: hidden; }
+.linha .esq { flex: 1 1 auto; }
+.linha .esq > div { min-width: 0; }
+.linha .dir { flex: none; }
+.hero .valor { font-size: clamp(32px, 11.5vw, 46px); }
+.kpis .full b { font-size: clamp(28px, 9.5vw, 38px); }
+.limite b { font-size: clamp(26px, 8.5vw, 34px); }
+.kpis b { font-size: clamp(16px, 4.8vw, 19px); }
+.form input.valor-grande { font-size: clamp(32px, 10vw, 40px); }
+.numeros b { font-size: clamp(13px, 3.9vw, 16px); }
+.numeros div { min-width: 0; padding: 12px 10px; }
+.kpis div, .hero, .limite { min-width: 0; overflow-wrap: anywhere; }
+/* campos de data no Safari: largura e altura consistentes */
+.form input[type="date"], .form input[type="month"] { min-width: 0; min-height: 44px; line-height: 1.2; }
+.form input::-webkit-date-and-time-value { text-align: left; }
+.scroll { overflow-x: auto; }
+@media (max-width: 359px) {
+  main { padding-left: 12px; padding-right: 12px; }
+  .mes-nav h1 { font-size: 20px; }
+  .numeros { grid-template-columns: 1fr 1fr; }
+  .numeros div:nth-child(3) { grid-column: span 2; border-left: 0; border-top: .5px solid var(--sep); }
+  .linha .esq .t, .linha .dir { font-size: 15px; }
+  .linha .esq { gap: 10px; }
+  .row2 { flex-direction: column; gap: 0; }
+  .proj-row { grid-template-columns: 48px 1fr auto; gap: 8px; }
+  .teclado { grid-template-columns: repeat(3, 70px); gap: 12px 20px; }
+  .teclado button { width: 70px; height: 70px; }
+}
+/* opções escondidas do controle segmentado não podem ocupar largura */
+.seg label { position: relative; }
+.seg input, .form .seg input { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; opacity: 0; pointer-events: none; }
+.impacto .l { flex-wrap: wrap; }
+@media (max-width: 359px) {
+  .impacto .l b { white-space: normal; }
+  .seg span { font-size: 12px; padding: 7px 2px; }
+}
