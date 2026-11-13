@@ -12,7 +12,19 @@ App web (PWA) para celular que reproduz a planilha **CUSTOS - PESSOAIS**: contro
 | C6 / LATAM | Cartão | não mexe no saldo do dia: vira fatura |
 | SALDO (última coluna) | Saldo do dia | saldo anterior + entradas − saídas − faturas |
 
-Fatura: as compras de um mês (fechamento padrão = último dia) são debitadas no vencimento do mês seguinte (C6 dia 10, LATAM dia 1). Fechamento e vencimento podem ser ajustados por cartão.
+Cartões (compras não mexem no saldo do dia; a fatura é debitada no vencimento):
+
+| Cartão | Ciclo de compras | Vencimento |
+|---|---|---|
+| LATAM | dia 1 ao último dia do mês | dia 1 do mês seguinte |
+| CAIXA | dia 28 do mês anterior ao dia 27 | dia 8 do mês seguinte |
+| C6 | dia 1 ao último dia do mês | dia 10 do mês seguinte |
+
+## Sobra para aplicar
+
+As contas do início do mês (dia 1 em diante) são pagas com o saldo do mês anterior. A **sobra** é o saldo no dia anterior aos recebimentos (padrão: dia 4, recebimentos a partir do dia 5) e é o valor disponível para aplicar. O dia é configurável em Ajustes.
+
+Ao registrar um lançamento, o app mostra antes de salvar quando ele sai do saldo, como fica a sobra afetada e se o saldo fica negativo nos próximos 12 meses.
 
 ## Usar
 

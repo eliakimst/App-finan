@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#2e7d4f">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e0f10" media="(prefers-color-scheme: dark)">
 <title>Custos Pessoais</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
@@ -11,137 +12,145 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top">
-  <h1 id="titulo">Custos Pessoais</h1>
-</header>
-
 <main>
   <!-- MÊS -->
   <section id="tela-mes" class="tela ativa">
     <div class="mes-nav">
-      <button class="icon" id="mes-ant" aria-label="Mês anterior">‹</button>
-      <h2 id="mes-nome"></h2>
-      <button class="icon" id="mes-prox" aria-label="Próximo mês">›</button>
+      <button class="nav-btn" id="mes-ant" aria-label="Mês anterior"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <h1 id="mes-nome"></h1>
+      <button class="nav-btn" id="mes-prox" aria-label="Próximo mês"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
-    <div class="resumo" id="resumo"></div>
+    <div id="hero"></div>
+    <div id="alerta"></div>
+    <div id="numeros"></div>
     <div id="faturas"></div>
-    <h3 class="sec">Movimentação diária</h3>
     <div id="dias"></div>
   </section>
 
   <!-- PROJEÇÃO -->
   <section id="tela-proj" class="tela">
-    <h2>Projeção de saldo</h2>
-    <p class="hint">Saldo no fim de cada mês, considerando lançamentos e recorrências.</p>
+    <h1 class="titulo">Projeção</h1>
+    <p class="hint" id="proj-hint"></p>
     <div id="proj"></div>
   </section>
 
   <!-- INVESTIMENTOS -->
   <section id="tela-inv" class="tela">
-    <h2>Investimentos</h2>
-    <div class="card" id="inv-resumo"></div>
+    <h1 class="titulo">Investir</h1>
+    <div id="inv-resumo"></div>
 
-    <h3 class="sec">Calculadora</h3>
-    <form id="calc" class="card form">
-      <label>Valor inicial (R$)<input inputmode="decimal" name="inicial" value="0"></label>
-      <label>Aporte mensal (R$)<input inputmode="decimal" name="aporte" value="0"></label>
+    <form id="calc" class="bloco form">
+      <h2>Calculadora</h2>
       <div class="row2">
-        <label>Taxa de juros (%)<input inputmode="decimal" name="taxa" value="1"></label>
-        <label>Período da taxa
-          <select name="periodo"><option value="am">ao mês</option><option value="aa">ao ano</option></select>
-        </label>
+        <label>Valor inicial<input inputmode="decimal" name="inicial" value="0"></label>
+        <label>Aporte mensal<input inputmode="decimal" name="aporte" value="0"></label>
+      </div>
+      <div class="row2">
+        <label>Taxa (%)<input inputmode="decimal" name="taxa" value="1"></label>
+        <label>Período<select name="periodo"><option value="am">ao mês</option><option value="aa">ao ano</option></select></label>
       </div>
       <div class="row2">
         <label>Prazo<input inputmode="numeric" name="prazo" value="12"></label>
-        <label>Unidade
-          <select name="unidade"><option value="m">meses</option><option value="a">anos</option></select>
-        </label>
+        <label>Unidade<select name="unidade"><option value="m">meses</option><option value="a">anos</option></select></label>
       </div>
-      <label>Imposto sobre o rendimento (%) — opcional
-        <input inputmode="decimal" name="ir" value="0">
-      </label>
-      <p class="hint">A taxa e a alíquota de imposto você informa. O app não busca taxas de mercado; confira os valores atuais com seu banco ou corretora.</p>
-      <div class="row2">
-        <button type="button" id="calc-usar-aportes" class="sec-btn">Meus aportes</button>
-        <button type="submit">Calcular</button>
+      <label>Imposto sobre o rendimento (%)<input inputmode="decimal" name="ir" value="0"></label>
+      <p class="hint">Você informa a taxa e o imposto. O app não consulta taxas de mercado; confira os valores atuais com seu banco ou corretora.</p>
+      <div class="chips">
+        <button type="button" class="chip" id="usar-sobra">Aporte = sobra prevista</button>
+        <button type="button" class="chip" id="usar-aportes">Inicial = já investido</button>
       </div>
+      <button type="submit" class="primario">Calcular</button>
     </form>
     <div id="calc-out"></div>
   </section>
 
   <!-- AJUSTES -->
   <section id="tela-cfg" class="tela">
-    <h2>Ajustes</h2>
-    <form id="cfg-saldo" class="card form">
-      <h3>Saldo inicial</h3>
+    <h1 class="titulo">Ajustes</h1>
+
+    <form id="cfg-geral" class="bloco form">
+      <h2>Saldo e recebimentos</h2>
       <div class="row2">
-        <label>Data<input type="date" name="data" required></label>
-        <label>Valor (R$)<input inputmode="decimal" name="valor" required></label>
+        <label>Saldo em<input type="date" name="data" required></label>
+        <label>Valor<input inputmode="decimal" name="valor" required></label>
       </div>
-      <button type="submit">Salvar</button>
+      <label>Recebimentos começam no dia<input inputmode="numeric" name="diaReceb" required></label>
+      <p class="hint">A “sobra” é o saldo no dia anterior a este, depois de pagar as contas do início do mês.</p>
+      <button type="submit" class="primario">Salvar</button>
     </form>
 
-    <div class="card">
-      <h3>Cartões</h3>
-      <p class="hint">Compras no cartão não saem do saldo na hora: viram fatura, debitada no dia do vencimento.</p>
+    <div class="bloco">
+      <h2>Cartões</h2>
       <div id="lista-cartoes"></div>
       <form id="form-cartao" class="form">
-        <input name="nome" placeholder="Nome (ex.: Nubank)" required>
+        <input type="hidden" name="id">
+        <label>Nome<input name="nome" required></label>
         <div class="row2">
           <label>Fecha dia<input inputmode="numeric" name="fecha" value="31" required></label>
           <label>Vence dia<input inputmode="numeric" name="vence" value="10" required></label>
         </div>
-        <button type="submit" class="sec-btn">Adicionar cartão</button>
+        <p class="hint">Compras até o dia de fechamento entram na fatura que vence no mês seguinte. Fechamento 31 = último dia do mês.</p>
+        <div class="row2">
+          <button type="button" class="secundario" id="cartao-cancelar" hidden>Cancelar</button>
+          <button type="submit" class="secundario" id="cartao-salvar">Adicionar cartão</button>
+        </div>
       </form>
     </div>
 
-    <div class="card">
-      <h3>Recorrências</h3>
-      <p class="hint">Lançamentos que se repetem todo mês (salário, aluguel, assinaturas…).</p>
+    <div class="bloco">
+      <h2>Recorrências</h2>
       <div id="lista-rec"></div>
     </div>
 
-    <div class="card">
-      <h3>Backup</h3>
+    <div class="bloco">
+      <h2>Backup</h2>
       <p class="hint">Os dados ficam só neste aparelho. Exporte com frequência.</p>
       <div class="row2">
-        <button id="exportar" class="sec-btn">Exportar</button>
-        <label class="btn sec-btn">Importar<input type="file" id="importar" accept="application/json" hidden></label>
+        <button id="exportar" class="secundario">Exportar</button>
+        <label class="secundario btn">Importar<input type="file" id="importar" accept="application/json" hidden></label>
       </div>
-      <button id="apagar" class="perigo">Apagar todos os dados</button>
+      <button id="apagar" class="link-perigo">Apagar todos os dados</button>
     </div>
   </section>
 </main>
 
-<button id="fab" aria-label="Novo lançamento">+</button>
+<button id="fab" aria-label="Novo lançamento"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
 
 <nav class="tabs">
-  <button data-tela="mes" class="ativa"><span>📅</span>Mês</button>
-  <button data-tela="proj"><span>📈</span>Projeção</button>
-  <button data-tela="inv"><span>🌱</span>Investir</button>
-  <button data-tela="cfg"><span>⚙️</span>Ajustes</button>
+  <button data-tela="mes" class="ativa"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Mês</button>
+  <button data-tela="proj"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M5 15l4-4 4 3 6-7"/></svg>Projeção</button>
+  <button data-tela="inv"><svg viewBox="0 0 24 24"><path d="M12 20v-8"/><path d="M12 12c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 14c0-3-2-5-6-5 0 3 2 5 6 5z"/></svg>Investir</button>
+  <button data-tela="cfg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Ajustes</button>
 </nav>
 
-<!-- Modal lançamento -->
+<!-- Lançamento -->
 <dialog id="dlg">
   <form id="form-lanc" method="dialog" class="form">
-    <h3 id="dlg-titulo">Novo lançamento</h3>
-    <div class="tipos" role="radiogroup">
-      <label><input type="radio" name="tipo" value="entrada" checked><span>Entrada</span></label>
-      <label><input type="radio" name="tipo" value="saida"><span>Saída</span></label>
-      <label><input type="radio" name="tipo" value="cartao"><span>Cartão</span></label>
-      <label class="inv"><input type="radio" name="tipo" value="investimento"><span>Investimento</span></label>
+    <div class="dlg-head">
+      <h2 id="dlg-titulo">Novo lançamento</h2>
+      <button type="button" class="x" id="dlg-cancelar" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
+    <div class="seg" role="radiogroup">
+      <label><input type="radio" name="tipo" value="saida" checked><span>Saída</span></label>
+      <label><input type="radio" name="tipo" value="cartao"><span>Cartão</span></label>
+      <label><input type="radio" name="tipo" value="entrada"><span>Entrada</span></label>
+      <label><input type="radio" name="tipo" value="investimento"><span>Investir</span></label>
+    </div>
+    <input class="valor-grande" inputmode="decimal" name="valor" placeholder="R$ 0,00" required autocomplete="off" aria-label="Valor">
     <label id="campo-cartao" hidden>Cartão<select name="cartao"></select></label>
-    <label>Valor (R$)<input inputmode="decimal" name="valor" required autocomplete="off"></label>
-    <label>Descrição<input name="descricao" autocomplete="off" placeholder="opcional"></label>
-    <label>Data<input type="date" name="data" required></label>
+    <div class="row2">
+      <label>Data<input type="date" name="data" required></label>
+      <label>Descrição<input name="descricao" autocomplete="off" placeholder="opcional"></label>
+    </div>
     <label class="check"><input type="checkbox" name="recorrente"> Repetir todo mês</label>
     <label id="campo-fim" hidden>Até (opcional)<input type="month" name="fim"></label>
-    <div class="row2">
-      <button type="button" id="dlg-excluir" class="perigo" hidden>Excluir</button>
-      <button type="button" id="dlg-cancelar" class="sec-btn">Cancelar</button>
-      <button type="submit" id="dlg-salvar">Salvar</button>
+
+    <div id="impacto"></div>
+
+    <div class="acoes">
+      <button type="button" id="dlg-pular" class="secundario" hidden>Pular só este mês</button>
+      <button type="button" id="dlg-excluir" class="link-perigo" hidden>Excluir</button>
+      <button type="submit" class="primario" id="dlg-salvar">Salvar</button>
     </div>
   </form>
 </dialog>
