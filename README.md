@@ -34,6 +34,12 @@ Abra `index.html` servido por HTTP (por exemplo, GitHub Pages) e use "Adicionar 
 
 Simulador que não salva nada: informe valor, à vista ou cartão, data e parcelas. O app mostra o maior valor que dá para gastar sem o saldo ficar negativo (ou abaixo de um mínimo que você quer guardar) nos próximos 12 meses, o veredito e um gráfico do saldo com e sem a compra. Se gostar, toque em "Registrar esta compra".
 
-## Saídas previstas
+## Entradas e saídas previstas
 
-Saídas que não são de cartão podem ser **previstas**: entram na projeção, mas o valor pode mudar. As recorrentes são sempre previstas; as avulsas são previstas quando a data é futura (dá para marcar ou desmarcar no lançamento). Quando a data chega, elas aparecem em **🔔 Para confirmar** na tela do mês. Ao confirmar você informa o valor e a data reais, e o app mostra a diferença em relação ao previsto. Valor 0 = não houve pagamento. Excluir um pagamento confirmado de uma recorrência devolve o valor previsto.
+Entradas e saídas que não são de cartão podem ser **previstas**: entram na projeção, mas o valor pode mudar. As recorrentes são sempre previstas; as avulsas são previstas quando a data é futura (dá para marcar ou desmarcar no lançamento). Quando a data chega, elas aparecem em **🔔 Para confirmar** na tela do mês. Ao confirmar você informa o valor e a data reais, e o app mostra a diferença em relação ao previsto. Valor 0 = não houve pagamento. Excluir um pagamento confirmado de uma recorrência devolve o valor previsto.
+
+## Projeção de 1 ano
+
+Dois cenários na aba Projeção:
+- **Mantendo o ritmo:** recorrências continuam sem data de fim (exceto parcelamentos) e as compras no cartão seguem a média dos últimos 3 meses completos (editável). Se as compras cadastradas num mês ficarem abaixo da média, a diferença é descontada no dia 1 do mês seguinte.
+- **Só o cadastrado:** apenas o que está lançado.

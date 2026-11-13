@@ -1,4 +1,4 @@
-const CACHE = 'custos-v4';
+const CACHE = 'custos-v5';
 const FILES = ['./', './index.html', './app.js', './style.css', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))));
 self.addEventListener('activate', e => e.waitUntil(

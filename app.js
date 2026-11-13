@@ -82,7 +82,7 @@ function ocorrenciasRec(st, ateA, ateM) {
       const ym = ymStr(a, m);
       if (r.fim && ym > r.fim) break;
       if (!(r.pular || []).includes(ym)) {
-        out.push({ ...r, id: `rec:${r.id}:${ym}`, recId: r.id, previsto: r.tipo === 'saida', data: `${ym}-${pad(Math.min(dia, diasNoMes(a, m)))}` });
+        out.push({ ...r, id: `rec:${r.id}:${ym}`, recId: r.id, previsto: (r.tipo === 'saida' || r.tipo === 'entrada'), data: `${ym}-${pad(Math.min(dia, diasNoMes(a, m)))}` });
       }
       [a, m] = addMes(a, m, 1);
     }
@@ -217,13 +217,13 @@ function renderMes() {
   $('#alerta').innerHTML = neg ? `<div class="alerta">🚨 Saldo fica negativo em ${dm(neg.data)} (${fmt(neg.valor)})</div>` : '';
   renderPendentes();
 
-  let ent = 0, sai = 0, inv = 0, prevMes = 0;
+  let ent = 0, sai = 0, inv = 0, prevMes = 0, prevEnt = 0;
   const dias = [...C.porDia.keys()].filter(d => d.startsWith(ym)).sort();
   for (const d of dias) {
     if (d < ini) continue;
     const o = C.porDia.get(d);
     for (const l of o.itens) {
-      if (l.tipo === 'entrada') ent += l.valor;
+      if (l.tipo === 'entrada') { ent += l.valor; if (l.previsto) prevEnt += l.valor; }
       if (l.tipo === 'saida') { sai += l.valor; if (l.previsto) prevMes += l.valor; }
       if (l.tipo === 'investimento') inv += l.valor;
     }
@@ -234,7 +234,8 @@ function renderMes() {
       <div><span class="ic">💰</span><small>Entradas</small><b class="num pos">${fmt(ent)}</b></div>
       <div><span class="ic">💸</span><small>Saídas</small><b class="num">${fmt(sai)}</b></div>
       <div><span class="ic">🏦</span><small>Saldo final</small><b class="num ${sFim < 0 ? 'neg' : ''}">${sFim == null ? '—' : fmt(sFim)}</b></div>
-    </div>${inv || prevMes ? `<p class="hint" style="margin:-12px 0 20px;text-align:center">${inv ? `🌱 Investido no mês: <b class="pos">${fmt(inv)}</b>` : ''}${inv && prevMes ? ' · ' : ''}${prevMes ? `🕒 Saídas previstas: <b>${fmt(prevMes)}</b>` : ''}</p>` : ''}`;
+    </div>${(() => { const p = [inv ? `🌱 Investido: <b class="pos">${fmt(inv)}</b>` : '', prevEnt ? `🕒 Entradas previstas: <b>${fmt(prevEnt)}</b>` : '', prevMes ? `🕒 Saídas previstas: <b>${fmt(prevMes)}</b>` : ''].filter(Boolean);
+      return p.length ? `<p class="hint" style="margin:-12px 0 20px;text-align:center;line-height:1.6">${p.join('<br>')}</p>` : ''; })()}`;
 
   const fats = [];
   for (const [d, o] of C.porDia) {
@@ -259,9 +260,9 @@ function renderMes() {
       const sinal = l.tipo === 'entrada' ? '+' : l.tipo === 'cartao' ? '' : '−';
       const cart = S.cartoes.find(c => c.id === l.cartao);
       const sub = l.tipo === 'cartao' ? `${nomeCartao(l.cartao)}${cart ? ' · fatura ' + dm(vencimento(l.data, cart)) : ''}` : (l.descricao ? ROTULO[l.tipo] : '');
-      const prev = l.tipo === 'saida' && l.previsto;
+      const prev = (l.tipo === 'saida' || l.tipo === 'entrada') && l.previsto;
       return `<div class="linha click ${prev ? 'previsto' : ''}" data-id="${esc(l.id)}">
-        <div class="esq"><span class="av ${l.tipo}">${prev ? '🕒' : EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}${l.recId || l.deRec ? ' 🔁' : ''}</div>${prev ? '<small><span class="selo">previsto</span></small>' : l.tipo === 'saida' && (l.deRec || l.confirmado) ? '<small><span class="selo ok">pago ✓</span></small>' : sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
+        <div class="esq"><span class="av ${l.tipo}">${prev ? '🕒' : EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}${l.recId || l.deRec ? ' 🔁' : ''}</div>${prev ? '<small><span class="selo">previsto</span></small>' : (l.tipo === 'saida' || l.tipo === 'entrada') && (l.deRec || l.confirmado) ? `<small><span class="selo ok">${l.tipo === 'entrada' ? 'recebido' : 'pago'} ✓</span></small>` : sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
         <div class="dir num ${l.tipo === 'entrada' || l.tipo === 'investimento' ? 'pos' : ''}" style="${l.tipo === 'cartao' ? 'color:var(--roxo)' : ''}">${sinal}${fmt(l.valor)}${prev ? `<button class="mini" data-conf="${esc(l.id)}">Confirmar</button>` : ''}</div></div>`;
     }).join('');
     const fts = Object.entries(o.faturas).map(([c, v]) => `
@@ -366,7 +367,7 @@ function atualizarSim() {
     if (rb.neg && !confirm('Essa compra deixa o saldo negativo. Registrar mesmo assim?')) return;
     const base = { tipo: p.forma, valor: Math.round(p.valor / p.n * 100) / 100, descricao: p.descricao, cartao: p.forma === 'cartao' ? p.cartao : undefined };
     if (p.n === 1) S.lancs.push({ id: uid(), ...base, data: p.data });
-    else { const [a, m] = p.data.split('-').map(Number); const [fa, fm] = addMes(a, m, p.n - 1); S.recs.push({ id: uid(), ...base, descricao: (p.descricao || 'Compra') + ` (${p.n}x)`, inicio: p.data, fim: ymStr(fa, fm), pular: [] }); }
+    else { const [a, m] = p.data.split('-').map(Number); const [fa, fm] = addMes(a, m, p.n - 1); S.recs.push({ id: uid(), ...base, descricao: (p.descricao || 'Compra') + ` (${p.n}x)`, inicio: p.data, fim: ymStr(fa, fm), pular: [], parcelado: true }); }
     fs.valor.value = ''; fs.descricao.value = '';
     salvar();
     alert('Compra registrada! ✅');
@@ -376,20 +377,95 @@ let simTimer;
 fs.addEventListener('input', () => { clearTimeout(simTimer); simTimer = setTimeout(atualizarSim, 150); });
 
 /* ---------------- Tela: Projeção ---------------- */
-function renderProj() {
-  const d = new Date();
-  const [a0, m0] = [d.getFullYear(), d.getMonth() + 1];
+// Média mensal de compras no cartão (avulsas + recorrentes) nos últimos 3 meses completos com dados
+function mediaCartao() {
+  const d = new Date(); const [a0, m0] = [d.getFullYear(), d.getMonth() + 1];
+  const C = calcular(S, a0, m0);
+  const primeira = C.lancs.reduce((mn, l) => (l.data < mn ? l.data : mn), '9999-99');
+  const meses = [];
+  for (let k = 3; k >= 1; k--) { const [a, m] = addMes(a0, m0, -k); if (ymStr(a, m) >= primeira.slice(0, 7)) meses.push([a, m]); }
+  if (!meses.length) return { media: 0, meses };
+  let tot = 0;
+  for (const [a, m] of meses) tot += C.lancs.filter(l => l.tipo === 'cartao' && l.data.startsWith(ymStr(a, m))).reduce((s, l) => s + l.valor, 0);
+  return { media: Math.round(tot / meses.length * 100) / 100, meses };
+}
+const ehParcelado = r => r.parcelado || /\(\d+x\)$/.test(r.descricao || '');
+
+// "Mantendo o ritmo": recorrências continuam sem data de fim (exceto parcelamentos)
+// e, se as compras no cartão de um mês ficarem abaixo da média, a diferença
+// é descontada no dia 1 do mês seguinte (estimativa conservadora).
+function estadoRitmo(media) {
+  const st = { ...S, recs: S.recs.map(r => (ehParcelado(r) ? r : { ...r, fim: '' })), lancs: S.lancs.slice() };
+  const d = new Date(); const [a0, m0] = [d.getFullYear(), d.getMonth() + 1];
   const [ha, hm] = horizonte();
-  const C = calcular(S, ha, hm);
-  const r = S.config.diaReceb;
-  $('#proj-hint').textContent = r > 1
-    ? `Sobra = saldo no dia ${r - 1}, depois das contas do início do mês e antes dos recebimentos do dia ${r}.`
-    : 'Sobra = saldo no último dia do mês anterior.';
+  const C = calcular(st, ha, hm);
+  for (let k = 0; k <= 12; k++) {
+    const [a, m] = addMes(a0, m0, k); const ym = ymStr(a, m);
+    const reg = C.lancs.filter(l => l.tipo === 'cartao' && l.data.startsWith(ym)).reduce((s, l) => s + l.valor, 0);
+    const extra = Math.round(Math.max(0, media - reg) * 100) / 100;
+    if (extra > 0) { const [na, nm] = addMes(a, m, 1); st.lancs.push({ id: 'ritmo' + k, tipo: 'saida', valor: extra, descricao: 'Média do cartão', data: `${ymStr(na, nm)}-01` }); }
+  }
+  return st;
+}
+
+function renderProj() {
+  const d = new Date(); const [a0, m0] = [d.getFullYear(), d.getMonth() + 1];
+  const [ha, hm] = horizonte();
+  const modo = $('#proj-modo input:checked').value;
+  const auto = mediaCartao();
+  const media = S.config.mediaCartao ?? auto.media;
+  const mi = $('#media-input');
+  if (document.activeElement !== mi) mi.value = brNum(media);
+  $('#media-hint').innerHTML = (auto.meses.length ? `Média automática: <b>${fmt(auto.media)}</b> (base: ${auto.meses.map(([a, m]) => mesCurto(a, m)).join(', ')}).` : 'Ainda não há meses completos para calcular a média.')
+    + ' Se as compras do mês ficarem abaixo disso, a diferença é descontada no dia 1 do mês seguinte.'
+    + (S.config.mediaCartao != null ? ' <a href="#" id="media-auto">Usar a automática</a>' : '');
+  const la = $('#media-auto'); if (la) la.onclick = e => { e.preventDefault(); S.config.mediaCartao = null; salvar(); };
+  $('#proj-media').hidden = modo !== 'ritmo';
+
+  const CA = calcular(S, ha, hm), CR = calcular(estadoRitmo(media), ha, hm);
+  const C = modo === 'ritmo' ? CR : CA;
+  const hoje = hojeStr();
+  const umAno = `${a0 + 1}-${pad(m0)}-${pad(Math.min(d.getDate(), diasNoMes(a0 + 1, m0)))}`;
+  const de = [hoje, S.saldoInicial.data].sort()[1];
+
   const linhas = [];
   for (let k = 0; k < 12; k++) {
     const [a, m] = addMes(a0, m0, k);
     linhas.push({ a, m, sobra: C.saldoAte(dataSobra(S, a, m)), fim: C.saldoAte(fimDoMes(a, m)) });
   }
+  const vR = CR.saldoAte(umAno), vA = CA.saldoAte(umAno);
+  const sHoje = C.saldoAte(de);
+  const mediaSobra = sHoje == null ? null : ((modo === 'ritmo' ? vR : vA) - sHoje) / 12;
+  const { min, neg } = C.analisar(de, umAno);
+  const v1 = modo === 'ritmo' ? vR : vA, v2 = modo === 'ritmo' ? vA : vR;
+  $('#proj-resumo').innerHTML = `<div class="kpis">
+      <div class="full" style="${v1 < 0 ? 'background:linear-gradient(135deg,#ff4d5e,#ff8a4c)' : ''}"><small>${modo === 'ritmo' ? '🔁 Mantendo o ritmo, ' : '📋 Só com o cadastrado, '}em ${dm(umAno)}/${String(a0 + 1).slice(2)} você terá</small><b class="num">${v1 == null ? '—' : fmt(v1)}</b></div>
+      <div><small>${modo === 'ritmo' ? '📋 Só o cadastrado' : '🔁 Mantendo o ritmo'}</small><b class="num">${v2 == null ? '—' : fmt(v2)}</b></div>
+      <div><small>🎯 Sobra por mês (média)</small><b class="num ${mediaSobra < 0 ? 'neg' : ''}">${mediaSobra == null ? '—' : fmt(mediaSobra)}</b></div>
+    </div>
+    ${neg ? `<div class="alerta">🚨 Nesse cenário o saldo fica negativo em ${dm(neg.data)} (${fmt(neg.valor)}).</div>` : min.valor != null ? `<p class="hint">Menor saldo no período: <b>${fmt(min.valor)}</b> em ${dm(min.data)}.</p>` : ''}`;
+
+  // gráfico: saldo no fim de cada mês, dois cenários
+  const pts = [];
+  for (let k = 0; k <= 12; k++) { const [a, m] = addMes(a0, m0, k); const f = k === 12 ? umAno : fimDoMes(a, m); pts.push([mesCurto(a, m), CA.saldoAte(f), CR.saldoAte(f)]); }
+  const vals = pts.flatMap(p => [p[1], p[2]]).filter(v => v != null);
+  if (vals.length) {
+    const lo = Math.min(0, ...vals), hi = Math.max(1, ...vals);
+    const W = 600, H = 210, P = 8, B = 22;
+    const x = i => P + (W - 2 * P) * i / 12, y = v => H - B - (H - B - P) * (v - lo) / (hi - lo);
+    const linha = k => pts.map((p, i) => p[k] == null ? null : `${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).filter(Boolean).join(' ');
+    const corR = 'var(--roxo)', corA = 'var(--acc)';
+    $('#proj-graf').innerHTML = `<svg class="graf" viewBox="0 0 ${W} ${H}" role="img" aria-label="Saldo projetado" style="stroke:none">
+        <line x1="${P}" x2="${W - P}" y1="${y(0)}" y2="${y(0)}" stroke="var(--neg)" stroke-width="1.5" stroke-dasharray="4 5" opacity=".6"/>
+        <polyline points="${linha(1)}" fill="none" stroke="${corA}" stroke-width="${modo === 'cadastro' ? 3.5 : 2}" opacity="${modo === 'cadastro' ? 1 : .45}"/>
+        <polyline points="${linha(2)}" fill="none" stroke="${corR}" stroke-width="${modo === 'ritmo' ? 3.5 : 2}" opacity="${modo === 'ritmo' ? 1 : .45}"/>
+        ${pts.map((p, i) => i % 3 === 0 || i === 12 ? `<text x="${x(i)}" y="${H - 4}" font-size="15" fill="var(--muted)" text-anchor="${i === 0 ? 'start' : i === 12 ? 'end' : 'middle'}" font-family="Nunito, sans-serif" font-weight="700">${p[0]}</text>` : '').join('')}
+      </svg>
+      <div class="legenda"><span><i style="background:${corR}"></i>Mantendo o ritmo</span><span><i style="background:${corA}"></i>Só o cadastrado</span></div>`;
+  } else $('#proj-graf').innerHTML = '<p class="hint">Sem dados.</p>';
+
+  const r = S.config.diaReceb;
+  $('#proj-hint').innerHTML = `<b>🎯 Sobra por mês</b> (saldo no dia ${r - 1 || 'anterior'}, antes dos recebimentos)`;
   const max = Math.max(1, ...linhas.map(l => Math.abs(l.sobra ?? 0)));
   $('#proj').innerHTML = linhas.map(l => `
     <div class="proj-row"><span>${mesCurto(l.a, l.m)}</span>
@@ -397,6 +473,12 @@ function renderProj() {
       <div class="dir"><b class="num ${l.sobra < 0 ? 'neg' : ''}">${l.sobra == null ? '—' : fmt(l.sobra)}</b><small>fim do mês ${l.fim == null ? '—' : fmt(l.fim)}</small></div>
     </div>`).join('');
 }
+$('#proj-modo').addEventListener('change', renderProj);
+$('#media-input').addEventListener('input', e => {
+  const v = parseNum(e.target.value);
+  S.config.mediaCartao = isNaN(v) ? null : Math.max(0, v);
+  clearTimeout(simTimer); simTimer = setTimeout(salvar, 300);
+});
 
 /* ---------------- Tela: Investir ---------------- */
 function infoInvest() {
@@ -560,7 +642,7 @@ function estadoDoForm() {
     if (recAnt) Object.assign(recAnt, novo); else st.recs.push({ id: uid(), ...novo });
   } else {
     novo = { id: editando?.id || uid(), ...base, data: fl.data.value };
-    if (tipo === 'saida') novo.previsto = fl.previsto.checked;
+    if (tipo === 'saida' || tipo === 'entrada') novo.previsto = fl.previsto.checked;
     if (original?.deRec) { novo.deRec = original.deRec; novo.deYm = original.deYm; }
     st.lancs.push(novo);
   }
@@ -570,8 +652,8 @@ function estadoDoForm() {
 function atualizarImpacto() {
   $('#campo-cartao').hidden = fl.tipo.value !== 'cartao';
   $('#campo-fim').hidden = !fl.recorrente.checked;
-  $('#campo-previsto').hidden = fl.tipo.value !== 'saida' || fl.recorrente.checked;
-  $('#nota-rec-prev').hidden = !(fl.tipo.value === 'saida' && fl.recorrente.checked);
+  $('#campo-previsto').hidden = !['saida', 'entrada'].includes(fl.tipo.value) || fl.recorrente.checked;
+  $('#nota-rec-prev').hidden = !(['saida', 'entrada'].includes(fl.tipo.value) && fl.recorrente.checked);
   const r = estadoDoForm();
   if (!r) { $('#impacto').innerHTML = ''; return; }
   const { st, base } = r;
@@ -673,7 +755,12 @@ let confItem = null;
 function abrirConfirmar(id, lista) {
   const l = (lista || S.lancs).find(x => x.id === id); if (!l) return;
   confItem = l;
-  $('#conf-desc').textContent = l.descricao || 'Saída';
+  const ent = l.tipo === 'entrada';
+  $('#conf-titulo').textContent = ent ? '✅ Confirmar recebimento' : '✅ Confirmar pagamento';
+  $('#conf-lbl-valor').firstChild.textContent = ent ? 'Valor recebido' : 'Valor pago';
+  $('#conf-lbl-data').firstChild.textContent = ent ? 'Data do recebimento' : 'Data do pagamento';
+  $('#conf-zero').textContent = ent ? 'Valor 0 = não recebeu neste mês.' : 'Valor 0 = não houve pagamento neste mês.';
+  $('#conf-desc').textContent = l.descricao || ROTULO[l.tipo];
   $('#conf-prev').textContent = `Previsto: ${fmt(l.valor)} em ${dm(l.data)}`;
   fcf.valor.value = brNum(l.valor);
   fcf.data.value = l.data > hojeStr() ? hojeStr() : l.data;
@@ -684,21 +771,22 @@ function abrirConfirmar(id, lista) {
 function atualizarConf() {
   const v = parseNum(fcf.valor.value);
   const dif = v - confItem.valor;
+  const bom = confItem.tipo === 'entrada' ? dif > 0 : dif < 0;
   $('#conf-dif').innerHTML = !(v >= 0) ? '' : Math.abs(dif) < 0.005 ? '👌 Igual ao previsto'
-    : dif > 0 ? `<span class="neg">😕 ${fmt(dif)} a mais que o previsto</span>` : `<span class="pos">🎉 ${fmt(-dif)} a menos que o previsto</span>`;
+    : `<span class="${bom ? 'pos' : 'neg'}">${bom ? '🎉' : '😕'} ${fmt(Math.abs(dif))} a ${dif > 0 ? 'mais' : 'menos'} que o previsto</span>`;
 }
 fcf.addEventListener('input', atualizarConf);
 $('#conf-cancelar').onclick = () => dc.close();
 fcf.onsubmit = e => {
   e.preventDefault();
   const v = parseNum(fcf.valor.value);
-  if (!(v >= 0) || !fcf.data.value) return alert('Informe o valor pago');
+  if (!(v >= 0) || !fcf.data.value) return alert('Informe o valor');
   const l = confItem;
   if (l.recId) {
     const r = S.recs.find(x => x.id === l.recId);
     const ym = l.data.slice(0, 7);
     r.pular = [...new Set([...(r.pular || []), ym])];
-    if (v > 0) S.lancs.push({ id: uid(), tipo: 'saida', valor: v, descricao: r.descricao, data: fcf.data.value, previsto: false, deRec: r.id, deYm: ym });
+    if (v > 0) S.lancs.push({ id: uid(), tipo: r.tipo, valor: v, descricao: r.descricao, data: fcf.data.value, previsto: false, deRec: r.id, deYm: ym });
   } else {
     const a = S.lancs.find(x => x.id === l.id);
     if (v > 0) Object.assign(a, { valor: v, data: fcf.data.value, previsto: false, confirmado: true });
@@ -710,13 +798,13 @@ function pendentes() {
   const d = new Date();
   const C = calcular(S, d.getFullYear(), d.getMonth() + 1);
   const h = hojeStr(), ini = S.saldoInicial.data;
-  return { C, lista: C.lancs.filter(l => l.tipo === 'saida' && l.previsto && l.data <= h && l.data >= ini).sort((a, b) => a.data.localeCompare(b.data)) };
+  return { C, lista: C.lancs.filter(l => (l.tipo === 'saida' || l.tipo === 'entrada') && l.previsto && l.data <= h && l.data >= ini).sort((a, b) => a.data.localeCompare(b.data)) };
 }
 function renderPendentes() {
   const { C, lista } = pendentes();
   $('#pendentes').innerHTML = !lista.length ? '' : `<div class="cartao-bloco pend"><h2>🔔 Para confirmar (${lista.length})</h2>
-    <p class="hint" style="margin-top:-6px">Saídas previstas que já venceram. Confirme o valor que foi pago de verdade.</p>
-    ${lista.map(l => `<div class="linha"><div class="esq"><span class="av saida">🕒</span><div style="min-width:0"><div class="t">${esc(l.descricao || 'Saída')}</div><small>${dm(l.data)} · previsto ${fmt(l.valor)}</small></div></div>
+    <p class="hint" style="margin-top:-6px">Valores previstos cuja data já chegou. Confirme quanto foi de verdade.</p>
+    ${lista.map(l => `<div class="linha"><div class="esq"><span class="av ${l.tipo}">${EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}</div><small>${dm(l.data)} · previsto ${fmt(l.valor)}</small></div></div>
       <div class="dir"><button class="mini forte" data-pend="${esc(l.id)}">Confirmar</button></div></div>`).join('')}</div>`;
   $$('[data-pend]').forEach(b => b.onclick = () => abrirConfirmar(b.dataset.pend, C.lancs));
 }
