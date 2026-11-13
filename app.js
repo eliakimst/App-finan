@@ -216,10 +216,25 @@ function renderMes() {
   const sobra = C.saldoAte(sobraD);
   const nomeProx = MESES[nm - 1];
 
+  // 1º destaque: saldo atual (hoje), independe do mês exibido
+  {
+    const d0 = new Date(), hj = hojeStr();
+    const CH = calcular(S, d0.getFullYear(), d0.getMonth() + 1);
+    const saldoHoje = CH.saldoAte(hj);
+    const prevHoje = CH.lancs.filter(l => (l.tipo === 'saida' || l.tipo === 'entrada') && l.previsto && l.data <= hj && l.data >= ini).length;
+    const dataTxt = `${SEM[d0.getDay()]}, ${d0.getDate()} de ${MESES[d0.getMonth()]}`;
+    $('#hoje').innerHTML = `<div class="hoje-topo"><span>Saldo atual</span><small>${dataTxt}</small></div>
+      <div class="saldo-card">
+        <div class="valor num ${saldoHoje < 0 ? 'neg' : ''}">${saldoHoje == null ? '—' : fmt(saldoHoje)}</div>
+        <div class="sub">${saldoHoje == null ? `O saldo inicial é de ${dm(ini)}. Ajuste em Ajustes.` : prevHoje ? `Considera ${prevHoje} valor${prevHoje > 1 ? 'es' : ''} previsto${prevHoje > 1 ? 's' : ''} ainda não confirmado${prevHoje > 1 ? 's' : ''}.` : 'Atualizado com os lançamentos até hoje.'}</div>
+      </div>`;
+  }
+
+  // 2º destaque: sobra para aplicar (início do mês seguinte ao exibido)
   if (sobra == null) $('#hero').innerHTML = '';
   else {
     const h = humor(sobra);
-    $('#hero').innerHTML = `<div class="hero ${h.c}">
+    $('#hero').innerHTML = `<div class="hero sobra ${h.c}">
       <div class="topo"><small>${h.t}</small><span class="status">${h.st}</span></div>
       <div class="valor num">${fmt(Math.abs(sobra))}</div>
       <div class="sub">em ${Number(sobraD.slice(8))} de ${nomeProx}, depois das contas do início do mês</div>

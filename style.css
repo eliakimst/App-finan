@@ -270,3 +270,17 @@ html, body { overflow-x: hidden; }
   .impacto .l b { white-space: normal; }
   .seg span { font-size: 12px; padding: 7px 2px; }
 }
+
+/* saldo atual (1º destaque) e sobra (2º) */
+.hoje-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 14px 2px 8px; }
+.hoje-topo span { font-size: 34px; font-weight: 700; letter-spacing: .01em; }
+.hoje-topo small { color: var(--muted); font-size: 15px; white-space: nowrap; }
+.saldo-card { background: var(--card); border-radius: 22px; padding: 18px 18px 16px; margin-bottom: 18px; }
+.saldo-card .valor { font-family: var(--round); font-size: clamp(38px, 13vw, 54px); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; }
+.saldo-card .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.hero.sobra { padding: 14px 16px 12px; border-radius: 16px; margin-top: 6px; }
+.hero.sobra small { font-size: 13px; }
+.hero.sobra .valor { font-size: clamp(24px, 8vw, 30px); margin: 2px 0 2px; }
+.hero.sobra .sub { font-size: 13px; }
+.mes-nav h1 { font-size: 22px; }
+@media (max-width: 359px) { .hoje-topo span { font-size: 28px; } .mes-nav h1 { font-size: 20px; } }
