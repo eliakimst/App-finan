@@ -1,6 +1,6 @@
-# Custos Pessoais
+# Posso gastar?
 
-App web (PWA) para celular que reproduz a planilha **CUSTOS - PESSOAIS**: controle diário de saldo, cartões de crédito com fatura e uma calculadora de investimentos.
+App web (PWA) para celular, com visual no estilo iOS, que reproduz a planilha **CUSTOS - PESSOAIS**: controle diário de saldo, cartões de crédito com fatura e uma calculadora de investimentos.
 
 ## Como a planilha calcula (e o app também)
 
@@ -43,3 +43,7 @@ Entradas e saídas que não são de cartão podem ser **previstas**: entram na p
 Dois cenários na aba Projeção:
 - **Mantendo o ritmo:** recorrências continuam sem data de fim (exceto parcelamentos) e as compras no cartão seguem a média dos últimos 3 meses completos (editável). Se as compras cadastradas num mês ficarem abaixo da média, a diferença é descontada no dia 1 do mês seguinte.
 - **Só o cadastrado:** apenas o que está lançado.
+
+## Código de acesso
+
+Na primeira abertura o app pede para criar um código de 4 dígitos, pedido de novo a cada abertura e depois de 1 minuto fora do app. Após 5 erros seguidos, o teclado trava por 30 s (dobrando a cada novo erro). Só um hash SHA-256 com sal é salvo. O código impede o acesso pela tela do app, mas **não criptografa** os dados guardados no navegador. "Esqueci o código" apaga os dados do aparelho (é possível importar um backup depois).

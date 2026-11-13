@@ -182,12 +182,19 @@ $('#mes-prox').onclick = () => { [verA, verM] = addMes(verA, verM, 1); render();
 const nomeCartao = id => (S.cartoes.find(c => c.id === id) || { nome: '?' }).nome;
 
 /* ---------------- Tela: Mês ---------------- */
-const EMOJI = { entrada: '💰', saida: '💸', cartao: '💳', investimento: '🌱', fatura: '🧾' };
+const SVGI = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
+const EMOJI = {
+  entrada: SVGI('<path d="M12 4v15M6 13l6 6 6-6"/>'),
+  saida: SVGI('<path d="M12 20V5M6 11l6-6 6 6"/>'),
+  cartao: SVGI('<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18M7 15h3"/>'),
+  investimento: SVGI('<path d="M4 17l5-5 4 4 7-7"/><path d="M15 9h5v5"/>'),
+  fatura: SVGI('<path d="M7 3h10v18l-2.5-1.5L12 21l-2.5-1.5L7 21z"/><path d="M10 8h4M10 12h4"/>'),
+  previsto: SVGI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+};
 function humor(v) {
-  if (v < 0) return { e: '😬', t: 'Vai faltar' };
-  if (v < 500) return { e: '🙂', t: 'Sobra apertada' };
-  if (v < 3000) return { e: '😄', t: 'Sobra para aplicar' };
-  return { e: '🤑', t: 'Sobra para aplicar' };
+  if (v < 0) return { c: 'ruim', t: 'Vai faltar', st: 'Negativo' };
+  if (v < 500) return { c: 'apertado', t: 'Sobra para aplicar', st: 'Apertado' };
+  return { c: '', t: 'Sobra para aplicar', st: 'Tudo certo' };
 }
 function renderMes() {
   $('#mes-nome').textContent = `${MESES[verM - 1]} ${verA}`;
@@ -204,9 +211,8 @@ function renderMes() {
   if (sobra == null) $('#hero').innerHTML = '';
   else {
     const h = humor(sobra);
-    $('#hero').innerHTML = `<div class="hero ${sobra < 0 ? 'ruim' : ''}">
-      <span class="emoji">${h.e}</span>
-      <small>${h.t}</small>
+    $('#hero').innerHTML = `<div class="hero ${h.c}">
+      <div class="topo"><small>${h.t}</small><span class="status">${h.st}</span></div>
       <div class="valor num">${fmt(Math.abs(sobra))}</div>
       <div class="sub">em ${Number(sobraD.slice(8))} de ${nomeProx}, depois das contas do início do mês</div>
     </div>`;
@@ -214,7 +220,7 @@ function renderMes() {
 
   const de = `${ym}-01` < ini ? ini : `${ym}-01`;
   const { neg } = de <= sobraD ? C.analisar(de, sobraD) : { neg: null };
-  $('#alerta').innerHTML = neg ? `<div class="alerta">🚨 Saldo fica negativo em ${dm(neg.data)} (${fmt(neg.valor)})</div>` : '';
+  $('#alerta').innerHTML = neg ? `<div class="alerta">Saldo fica negativo em ${dm(neg.data)} (${fmt(neg.valor)})</div>` : '';
   renderPendentes();
 
   let ent = 0, sai = 0, inv = 0, prevMes = 0, prevEnt = 0;
@@ -231,11 +237,11 @@ function renderMes() {
   }
   const sFim = C.saldoAte(fim);
   $('#numeros').innerHTML = ini > fim ? '' : `<div class="numeros">
-      <div><span class="ic">💰</span><small>Entradas</small><b class="num pos">${fmt(ent)}</b></div>
-      <div><span class="ic">💸</span><small>Saídas</small><b class="num">${fmt(sai)}</b></div>
-      <div><span class="ic">🏦</span><small>Saldo final</small><b class="num ${sFim < 0 ? 'neg' : ''}">${sFim == null ? '—' : fmt(sFim)}</b></div>
-    </div>${(() => { const p = [inv ? `🌱 Investido: <b class="pos">${fmt(inv)}</b>` : '', prevEnt ? `🕒 Entradas previstas: <b>${fmt(prevEnt)}</b>` : '', prevMes ? `🕒 Saídas previstas: <b>${fmt(prevMes)}</b>` : ''].filter(Boolean);
-      return p.length ? `<p class="hint" style="margin:-12px 0 20px;text-align:center;line-height:1.6">${p.join('<br>')}</p>` : ''; })()}`;
+      <div><small>Entradas</small><b class="num pos">${fmt(ent)}</b></div>
+      <div><small>Saídas</small><b class="num">${fmt(sai)}</b></div>
+      <div><small>Saldo final</small><b class="num ${sFim < 0 ? 'neg' : ''}">${sFim == null ? '—' : fmt(sFim)}</b></div>
+    </div>${(() => { const p = [inv ? `Investido: <b class="pos">${fmt(inv)}</b>` : '', prevEnt ? `Entradas previstas: <b>${fmt(prevEnt)}</b>` : '', prevMes ? `Saídas previstas: <b>${fmt(prevMes)}</b>` : ''].filter(Boolean);
+      return p.length ? `<p class="resumo-extra">${p.join(' · ')}</p>` : ''; })()}`;
 
   const fats = [];
   for (const [d, o] of C.porDia) {
@@ -243,15 +249,15 @@ function renderMes() {
     for (const [c, v] of Object.entries(o.faturas)) fats.push({ d, c, v });
   }
   fats.sort((a, b) => a.d.localeCompare(b.d));
-  $('#faturas').innerHTML = fats.length ? `<div class="cartao-bloco"><h2>🧾 Faturas de ${nomeProx}</h2>${fats.map(f => `
-      <div class="linha"><div class="esq"><span class="av fatura">💳</span><div><div class="t">${esc(nomeCartao(f.c))}</div><small>vence ${dm(f.d)}</small></div></div>
+  $('#faturas').innerHTML = fats.length ? `<p class="sec-titulo">Faturas de ${nomeProx}</p><div class="cartao-bloco" style="padding-top:2px;padding-bottom:2px">${fats.map(f => `
+      <div class="linha"><div class="esq"><span class="av cartao">${EMOJI.cartao}</span><div><div class="t">${esc(nomeCartao(f.c))}</div><small>vence ${dm(f.d)}</small></div></div>
       <div class="dir num">${fmt(f.v)}</div></div>`).join('')}</div>` : '';
 
-  const antes = ini > fim ? `<div class="info">📜 Histórico: este mês é anterior ao saldo inicial (${dm(ini)}/${ini.slice(0, 4)}), então não afeta o saldo.</div>` : '';
-  if (!dias.length) { $('#dias').innerHTML = antes + '<div class="vazio"><span class="big">🍃</span>Nada por aqui ainda.<br>Toque no + para lançar.</div>'; return; }
+  const antes = ini > fim ? `<div class="info">Histórico: este mês é anterior ao saldo inicial (${dm(ini)}/${ini.slice(0, 4)}), então não afeta o saldo.</div>` : '';
+  if (!dias.length) { $('#dias').innerHTML = antes + '<div class="vazio">Nenhum lançamento.<br>Toque em + para adicionar.</div>'; return; }
 
   const ordem = 'entrada saida investimento cartao';
-  $('#dias').innerHTML = antes + '<h2>📒 Lançamentos</h2>' + dias.map(d => {
+  $('#dias').innerHTML = antes + dias.map(d => {
     const o = C.porDia.get(d);
     const saldo = C.saldoAte(d);
     const [a, m, dd] = d.split('-').map(Number);
@@ -262,13 +268,13 @@ function renderMes() {
       const sub = l.tipo === 'cartao' ? `${nomeCartao(l.cartao)}${cart ? ' · fatura ' + dm(vencimento(l.data, cart)) : ''}` : (l.descricao ? ROTULO[l.tipo] : '');
       const prev = (l.tipo === 'saida' || l.tipo === 'entrada') && l.previsto;
       return `<div class="linha click ${prev ? 'previsto' : ''}" data-id="${esc(l.id)}">
-        <div class="esq"><span class="av ${l.tipo}">${prev ? '🕒' : EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}${l.recId || l.deRec ? ' 🔁' : ''}</div>${prev ? '<small><span class="selo">previsto</span></small>' : (l.tipo === 'saida' || l.tipo === 'entrada') && (l.deRec || l.confirmado) ? `<small><span class="selo ok">${l.tipo === 'entrada' ? 'recebido' : 'pago'} ✓</span></small>` : sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
+        <div class="esq"><span class="av ${prev ? 'previsto' : l.tipo}">${prev ? EMOJI.previsto : EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}${l.recId || l.deRec ? ' <span class="rep">↻</span>' : ''}</div>${prev ? '<small><span class="selo">previsto</span></small>' : (l.tipo === 'saida' || l.tipo === 'entrada') && (l.deRec || l.confirmado) ? `<small><span class="selo ok">${l.tipo === 'entrada' ? 'recebido' : 'pago'} ✓</span></small>` : sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
         <div class="dir num ${l.tipo === 'entrada' || l.tipo === 'investimento' ? 'pos' : ''}" style="${l.tipo === 'cartao' ? 'color:var(--roxo)' : ''}">${sinal}${fmt(l.valor)}${prev ? `<button class="mini" data-conf="${esc(l.id)}">Confirmar</button>` : ''}</div></div>`;
     }).join('');
     const fts = Object.entries(o.faturas).map(([c, v]) => `
-      <div class="linha"><div class="esq"><span class="av fatura">🧾</span><div><div class="t">Fatura ${esc(nomeCartao(c))}</div><small>pagamento</small></div></div>
+      <div class="linha"><div class="esq"><span class="av fatura">${EMOJI.fatura}</span><div><div class="t">Fatura ${esc(nomeCartao(c))}</div><small>pagamento</small></div></div>
       <div class="dir num">−${fmt(v)}</div></div>`).join('');
-    return `<div class="dia"><div class="dia-head${saldo != null && saldo < 0 ? ' neg' : ''}"><span class="${d === hoje ? 'hoje' : ''}">${d === hoje ? 'hoje' : sem}, ${dd}</span><span>saldo <b class="num">${saldo == null ? '—' : fmt(saldo)}</b></span></div>${itens}${fts}</div>`;
+    return `<div class="dia"><div class="dia-head${saldo != null && saldo < 0 ? ' neg' : ''}"><span class="${d === hoje ? 'hoje' : ''}">${d === hoje ? 'hoje' : sem}, ${dd}</span><span><b class="num">${saldo == null ? '—' : fmt(saldo)}</b></span></div><div class="grupo">${itens}${fts}</div></div>`;
   }).join('');
 
   $$('#dias .linha.click').forEach(el => el.onclick = () => abrirLanc(el.dataset.id, C.lancs));
@@ -325,8 +331,8 @@ function atualizarSim() {
   const J = janelaSim();
   const max = maxGastavel(p);
   const como = p.forma === 'cartao' ? `no ${esc(nomeCartao(p.cartao))}` : 'à vista';
-  $('#sim-limite').innerHTML = `<div class="limite"><span class="ic">🎯</span><div><small>Dá para gastar ${como}${p.n > 1 ? ` em ${p.n}x` : ''} até${p.reserva ? ` (guardando ${fmt(p.reserva)})` : ''}</small><b class="num">${fmt(max)}</b></div></div>`;
-  if (!(p.valor > 0)) { $('#sim-out').innerHTML = '<div class="vazio"><span class="big">✍️</span>Digite um valor para simular.</div>'; return; }
+  $('#sim-limite').innerHTML = `<div class="limite"><div><small>Dá para gastar ${como}${p.n > 1 ? ` em ${p.n}x` : ''} até${p.reserva ? ` (guardando ${fmt(p.reserva)})` : ''}</small><b class="num">${fmt(max)}</b></div></div>`;
+  if (!(p.valor > 0)) { $('#sim-out').innerHTML = '<div class="vazio">Digite um valor para simular.</div>'; return; }
 
   const A = calcular(S, J.ha, J.hm), B = calcular(comCompra(S, p, p.valor), J.ha, J.hm);
   const rb = B.analisar(J.de, J.ate);
@@ -335,9 +341,10 @@ function atualizarSim() {
   const sd = proximaSobra(S, debito);
   const abaixo = rb.min.valor != null && rb.min.valor < p.reserva - 0.004;
   let em, tit, txt;
-  if (rb.neg) { em = '😱'; tit = 'Melhor não!'; txt = `O saldo fica negativo em ${dm(rb.neg.data)} (${fmt(rb.neg.valor)}).`; }
-  else if (abaixo) { em = '😅'; tit = 'Até dá, mas aperta'; txt = `O saldo cai para ${fmt(rb.min.valor)} em ${dm(rb.min.data)}, abaixo do mínimo que você quer guardar.`; }
-  else { em = '🥳'; tit = 'Pode gastar!'; txt = `O menor saldo fica em ${fmt(rb.min.valor)} (${dm(rb.min.data)}).`; }
+  const IX = SVGI('<path d="M7 7l10 10M17 7L7 17"/>'), IOK = SVGI('<path d="M5 12.5l4.5 4.5L19 7.5"/>'), IEX = SVGI('<path d="M12 6v8M12 18v.01"/>');
+  if (rb.neg) { em = IX; tit = 'Melhor não'; txt = `O saldo fica negativo em ${dm(rb.neg.data)} (${fmt(rb.neg.valor)}).`; }
+  else if (abaixo) { em = IEX; tit = 'Até dá, mas aperta'; txt = `O saldo cai para ${fmt(rb.min.valor)} em ${dm(rb.min.data)}, abaixo do mínimo que você quer guardar.`; }
+  else { em = IOK; tit = 'Pode gastar'; txt = `O menor saldo fica em ${fmt(rb.min.valor)} (${dm(rb.min.data)}).`; }
 
   // gráfico: saldo antes x depois, de hoje até o horizonte
   const pts = []; for (let d = J.de, i = 0; d <= J.ate && i < 400; d = addDias(d, 3), i++) pts.push([d, A.saldoAte(d), B.saldoAte(d)]);
@@ -348,7 +355,7 @@ function atualizarSim() {
   const linha = k => pts.map((q, i) => `${x(i).toFixed(1)},${y(q[k] ?? 0).toFixed(1)}`).join(' ');
 
   $('#sim-out').innerHTML = `
-    <div class="veredito ${rb.neg || abaixo ? 'ruim' : ''}"><span class="em">${em}</span><b>${tit}</b><p>${txt}</p></div>
+    <div class="veredito ${rb.neg ? 'ruim' : abaixo ? 'apertado' : ''}"><span class="em">${em}</span><b>${tit}</b><p>${txt}</p></div>
     <div class="cartao-bloco">
       <div class="impacto" style="background:none;padding:0;margin:0 0 6px">
         <div class="l"><span>${p.forma === 'cartao' ? 'Primeira fatura' : 'Sai do saldo em'}</span><b>${dm(debito)}</b></div>
@@ -370,7 +377,7 @@ function atualizarSim() {
     else { const [a, m] = p.data.split('-').map(Number); const [fa, fm] = addMes(a, m, p.n - 1); S.recs.push({ id: uid(), ...base, descricao: (p.descricao || 'Compra') + ` (${p.n}x)`, inicio: p.data, fim: ymStr(fa, fm), pular: [], parcelado: true }); }
     fs.valor.value = ''; fs.descricao.value = '';
     salvar();
-    alert('Compra registrada! ✅');
+    alert('Compra registrada.');
   };
 }
 let simTimer;
@@ -439,11 +446,11 @@ function renderProj() {
   const { min, neg } = C.analisar(de, umAno);
   const v1 = modo === 'ritmo' ? vR : vA, v2 = modo === 'ritmo' ? vA : vR;
   $('#proj-resumo').innerHTML = `<div class="kpis">
-      <div class="full" style="${v1 < 0 ? 'background:linear-gradient(135deg,#ff4d5e,#ff8a4c)' : ''}"><small>${modo === 'ritmo' ? '🔁 Mantendo o ritmo, ' : '📋 Só com o cadastrado, '}em ${dm(umAno)}/${String(a0 + 1).slice(2)} você terá</small><b class="num">${v1 == null ? '—' : fmt(v1)}</b></div>
-      <div><small>${modo === 'ritmo' ? '📋 Só o cadastrado' : '🔁 Mantendo o ritmo'}</small><b class="num">${v2 == null ? '—' : fmt(v2)}</b></div>
-      <div><small>🎯 Sobra por mês (média)</small><b class="num ${mediaSobra < 0 ? 'neg' : ''}">${mediaSobra == null ? '—' : fmt(mediaSobra)}</b></div>
+      <div class="full ${v1 < 0 ? 'ruim' : ''}"><small>${modo === 'ritmo' ? 'Mantendo o ritmo, ' : 'Só com o cadastrado, '}em ${dm(umAno)}/${String(a0 + 1).slice(2)} você terá</small><b class="num">${v1 == null ? '—' : fmt(v1)}</b></div>
+      <div><small>${modo === 'ritmo' ? 'Só o cadastrado' : 'Mantendo o ritmo'}</small><b class="num">${v2 == null ? '—' : fmt(v2)}</b></div>
+      <div><small>Sobra por mês (média)</small><b class="num ${mediaSobra < 0 ? 'neg' : ''}">${mediaSobra == null ? '—' : fmt(mediaSobra)}</b></div>
     </div>
-    ${neg ? `<div class="alerta">🚨 Nesse cenário o saldo fica negativo em ${dm(neg.data)} (${fmt(neg.valor)}).</div>` : min.valor != null ? `<p class="hint">Menor saldo no período: <b>${fmt(min.valor)}</b> em ${dm(min.data)}.</p>` : ''}`;
+    ${neg ? `<div class="alerta">Nesse cenário o saldo fica negativo em ${dm(neg.data)} (${fmt(neg.valor)}).</div>` : min.valor != null ? `<p class="hint">Menor saldo no período: <b>${fmt(min.valor)}</b> em ${dm(min.data)}.</p>` : ''}`;
 
   // gráfico: saldo no fim de cada mês, dois cenários
   const pts = [];
@@ -459,13 +466,13 @@ function renderProj() {
         <line x1="${P}" x2="${W - P}" y1="${y(0)}" y2="${y(0)}" stroke="var(--neg)" stroke-width="1.5" stroke-dasharray="4 5" opacity=".6"/>
         <polyline points="${linha(1)}" fill="none" stroke="${corA}" stroke-width="${modo === 'cadastro' ? 3.5 : 2}" opacity="${modo === 'cadastro' ? 1 : .45}"/>
         <polyline points="${linha(2)}" fill="none" stroke="${corR}" stroke-width="${modo === 'ritmo' ? 3.5 : 2}" opacity="${modo === 'ritmo' ? 1 : .45}"/>
-        ${pts.map((p, i) => i % 3 === 0 || i === 12 ? `<text x="${x(i)}" y="${H - 4}" font-size="15" fill="var(--muted)" text-anchor="${i === 0 ? 'start' : i === 12 ? 'end' : 'middle'}" font-family="Nunito, sans-serif" font-weight="700">${p[0]}</text>` : '').join('')}
+        ${pts.map((p, i) => i % 3 === 0 || i === 12 ? `<text x="${x(i)}" y="${H - 4}" font-size="15" fill="var(--muted)" text-anchor="${i === 0 ? 'start' : i === 12 ? 'end' : 'middle'}" font-family="-apple-system, sans-serif" font-weight="500">${p[0]}</text>` : '').join('')}
       </svg>
       <div class="legenda"><span><i style="background:${corR}"></i>Mantendo o ritmo</span><span><i style="background:${corA}"></i>Só o cadastrado</span></div>`;
   } else $('#proj-graf').innerHTML = '<p class="hint">Sem dados.</p>';
 
   const r = S.config.diaReceb;
-  $('#proj-hint').innerHTML = `<b>🎯 Sobra por mês</b> (saldo no dia ${r - 1 || 'anterior'}, antes dos recebimentos)`;
+  $('#proj-hint').textContent = `Sobra por mês · saldo no dia ${r - 1 || 'anterior'}`;
   const max = Math.max(1, ...linhas.map(l => Math.abs(l.sobra ?? 0)));
   $('#proj').innerHTML = linhas.map(l => `
     <div class="proj-row"><span>${mesCurto(l.a, l.m)}</span>
@@ -493,8 +500,8 @@ function infoInvest() {
 function renderInv() {
   const r = infoInvest();
   $('#inv-resumo').innerHTML = `<div class="kpis" style="margin-bottom:28px">
-      <div><small>🌱 Já investido</small><b class="num pos">${fmt(r.total)}</b></div>
-      <div><small>🎯 Sobra em ${dm(r.sobraData)}</small><b class="num ${r.sobra < 0 ? 'neg' : ''}">${r.sobra == null ? '—' : fmt(r.sobra)}</b></div>
+      <div><small>Já investido</small><b class="num pos">${fmt(r.total)}</b></div>
+      <div><small>Sobra em ${dm(r.sobraData)}</small><b class="num ${r.sobra < 0 ? 'neg' : ''}">${r.sobra == null ? '—' : fmt(r.sobra)}</b></div>
     </div>`;
 }
 const brNum = v => v.toFixed(2).replace('.', ',');
@@ -561,9 +568,9 @@ function renderCfg() {
   f.diaReceb.value = S.config.diaReceb;
 
   $('#lista-cartoes').innerHTML = S.cartoes.map(c => `
-    <div class="linha click" data-cart="${esc(c.id)}"><div class="esq"><span class="av cartao">💳</span><div><div class="t">${esc(c.nome)}</div>
+    <div class="linha click" data-cart="${esc(c.id)}"><div class="esq"><span class="av cartao">${EMOJI.cartao}</span><div><div class="t">${esc(c.nome)}</div>
     <small>${c.fecha >= 31 ? 'fecha no fim do mês' : `compras de ${c.fecha + 1} a ${c.fecha}`} · vence dia ${c.vence}</small></div></div>
-    <div class="dir hint" style="margin:0">editar ✏️</div></div>`).join('') || '<p class="hint">Nenhum cartão.</p>';
+    <div class="dir" style="color:var(--muted)">›</div></div>`).join('') || '<p class="hint">Nenhum cartão.</p>';
   $$('[data-cart]').forEach(el => el.onclick = () => {
     const c = S.cartoes.find(x => x.id === el.dataset.cart);
     fc.id.value = c.id; fc.nome.value = c.nome; fc.fecha.value = c.fecha; fc.vence.value = c.vence;
@@ -756,7 +763,7 @@ function abrirConfirmar(id, lista) {
   const l = (lista || S.lancs).find(x => x.id === id); if (!l) return;
   confItem = l;
   const ent = l.tipo === 'entrada';
-  $('#conf-titulo').textContent = ent ? '✅ Confirmar recebimento' : '✅ Confirmar pagamento';
+  $('#conf-titulo').textContent = ent ? 'Confirmar recebimento' : 'Confirmar pagamento';
   $('#conf-lbl-valor').firstChild.textContent = ent ? 'Valor recebido' : 'Valor pago';
   $('#conf-lbl-data').firstChild.textContent = ent ? 'Data do recebimento' : 'Data do pagamento';
   $('#conf-zero').textContent = ent ? 'Valor 0 = não recebeu neste mês.' : 'Valor 0 = não houve pagamento neste mês.';
@@ -772,8 +779,8 @@ function atualizarConf() {
   const v = parseNum(fcf.valor.value);
   const dif = v - confItem.valor;
   const bom = confItem.tipo === 'entrada' ? dif > 0 : dif < 0;
-  $('#conf-dif').innerHTML = !(v >= 0) ? '' : Math.abs(dif) < 0.005 ? '👌 Igual ao previsto'
-    : `<span class="${bom ? 'pos' : 'neg'}">${bom ? '🎉' : '😕'} ${fmt(Math.abs(dif))} a ${dif > 0 ? 'mais' : 'menos'} que o previsto</span>`;
+  $('#conf-dif').innerHTML = !(v >= 0) ? '' : Math.abs(dif) < 0.005 ? 'Igual ao previsto'
+    : `<span class="${bom ? 'pos' : 'neg'}">${fmt(Math.abs(dif))} a ${dif > 0 ? 'mais' : 'menos'} que o previsto</span>`;
 }
 fcf.addEventListener('input', atualizarConf);
 $('#conf-cancelar').onclick = () => dc.close();
@@ -802,9 +809,9 @@ function pendentes() {
 }
 function renderPendentes() {
   const { C, lista } = pendentes();
-  $('#pendentes').innerHTML = !lista.length ? '' : `<div class="cartao-bloco pend"><h2>🔔 Para confirmar (${lista.length})</h2>
-    <p class="hint" style="margin-top:-6px">Valores previstos cuja data já chegou. Confirme quanto foi de verdade.</p>
-    ${lista.map(l => `<div class="linha"><div class="esq"><span class="av ${l.tipo}">${EMOJI[l.tipo]}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}</div><small>${dm(l.data)} · previsto ${fmt(l.valor)}</small></div></div>
+  $('#pendentes').innerHTML = !lista.length ? '' : `<div class="cartao-bloco pend"><h2>Para confirmar (${lista.length})</h2>
+    <p class="hint" style="margin:0 0 4px">Valores previstos cuja data já chegou. Confirme quanto foi de verdade.</p>
+    ${lista.map(l => `<div class="linha"><div class="esq"><span class="av previsto">${EMOJI.previsto}</span><div style="min-width:0"><div class="t">${esc(l.descricao || ROTULO[l.tipo])}</div><small>${dm(l.data)} · previsto ${fmt(l.valor)}</small></div></div>
       <div class="dir"><button class="mini forte" data-pend="${esc(l.id)}">Confirmar</button></div></div>`).join('')}</div>`;
   $$('[data-pend]').forEach(b => b.onclick = () => abrirConfirmar(b.dataset.pend, C.lancs));
 }
@@ -824,3 +831,91 @@ calcularInvestimento();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+/* ---------------- Código de acesso ----------------
+   Guarda só um hash (SHA-256 com sal) do código. Impede que outra pessoa
+   abra o app no aparelho; não criptografa os dados salvos no navegador. */
+const PIN_KEY = 'posso-gastar-pin';
+async function hashPin(pin, salt) {
+  const txt = salt + ':' + pin;
+  if (window.crypto?.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 2166136261; for (const c of txt) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return 'fnv' + h.toString(16);
+}
+const lerPin = () => { try { return JSON.parse(localStorage.getItem(PIN_KEY)); } catch { return null; } };
+const LK = { modo: 'entrar', digitos: '', novo: '', falhas: 0, bloqueadoAte: 0, alterando: false };
+const LK_TITULO = { entrar: 'Digite o código', confirmar: 'Confirme o código', atual: 'Digite o código atual' };
+
+function lkMostrar(modo, msg = '', erro = false) {
+  LK.modo = modo; LK.digitos = '';
+  document.body.classList.add('travado'); $('#lock').hidden = false;
+  try { if (dlg.open) dlg.close(); if (dc.open) dc.close(); } catch {}
+  $('#lk-titulo').textContent = modo === 'criar' ? (LK.alterando ? 'Digite o novo código' : 'Crie um código de 4 dígitos') : LK_TITULO[modo];
+  $('#lk-msg').textContent = msg || (modo === 'criar' && !LK.alterando ? 'Ele será pedido sempre que abrir o app.' : '');
+  $('#lk-msg').classList.toggle('erro', erro);
+  $('#lk-esqueci').hidden = modo !== 'entrar';
+  $('#lk-cancelar').style.visibility = LK.alterando ? 'visible' : 'hidden';
+  lkDots();
+}
+function lkDots() { $$('#lk-dots i').forEach((d, i) => d.classList.toggle('on', i < LK.digitos.length)); }
+function lkErro(msg) {
+  const d = $('#lk-dots'); d.classList.remove('treme'); void d.offsetWidth; d.classList.add('treme');
+  try { navigator.vibrate?.(200); } catch {}
+  LK.digitos = ''; lkDots();
+  $('#lk-msg').textContent = msg; $('#lk-msg').classList.add('erro');
+}
+function lkAbrir() {
+  document.body.classList.remove('travado'); $('#lock').hidden = true;
+  LK.alterando = false; LK.falhas = 0; render();
+}
+async function lkCompleto() {
+  const pin = LK.digitos;
+  if (LK.modo === 'criar') { LK.novo = pin; return lkMostrar('confirmar'); }
+  if (LK.modo === 'confirmar') {
+    if (pin !== LK.novo) return lkMostrar('criar', 'Os códigos não coincidem. Tente de novo.', true);
+    const salt = uid();
+    localStorage.setItem(PIN_KEY, JSON.stringify({ salt, hash: await hashPin(pin, salt) }));
+    const alterou = LK.alterando;
+    lkAbrir();
+    if (alterou) alert('Código alterado.');
+    return;
+  }
+  const p = lerPin();
+  if (p && await hashPin(pin, p.salt) === p.hash) { LK.falhas = 0; return LK.modo === 'atual' ? lkMostrar('criar') : lkAbrir(); }
+  LK.falhas++;
+  if (LK.falhas >= 5) {
+    const seg = 30 * 2 ** (LK.falhas - 5);
+    LK.bloqueadoAte = Date.now() + seg * 1000;
+    return lkErro(`Muitas tentativas. Aguarde ${seg} s.`);
+  }
+  lkErro(`Código incorreto. ${5 - LK.falhas} tentativa${5 - LK.falhas > 1 ? 's' : ''} antes de bloquear.`);
+}
+$$('#lk-teclado [data-d]').forEach(b => b.onclick = () => {
+  if (Date.now() < LK.bloqueadoAte) return lkErro(`Aguarde ${Math.ceil((LK.bloqueadoAte - Date.now()) / 1000)} s.`);
+  if (LK.digitos.length >= 4) return;
+  LK.digitos += b.dataset.d; lkDots();
+  if (LK.digitos.length === 4) setTimeout(lkCompleto, 120);
+});
+$('#lk-apagar').onclick = () => { LK.digitos = LK.digitos.slice(0, -1); lkDots(); };
+$('#lk-cancelar').onclick = () => lkAbrir();
+$('#lk-esqueci').onclick = () => {
+  if (!confirm('Sem o código não é possível abrir os dados.\n\nApagar TODOS os dados deste aparelho e criar um código novo? Se você tem um backup exportado, poderá importá-lo depois.')) return;
+  localStorage.removeItem(PIN_KEY); localStorage.removeItem(KEY);
+  S = estadoPadrao(); LK.falhas = 0; LK.bloqueadoAte = 0;
+  lkMostrar('criar');
+};
+document.addEventListener('keydown', e => {
+  if ($('#lock').hidden) return;
+  if (/^\d$/.test(e.key)) $(`#lk-teclado [data-d="${e.key}"]`).click();
+  else if (e.key === 'Backspace') $('#lk-apagar').click();
+});
+$('#alterar-pin').onclick = () => { LK.alterando = true; lkMostrar('atual'); };
+let saiuEm = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) saiuEm = Date.now();
+  else if (saiuEm && Date.now() - saiuEm > 60000 && lerPin() && $('#lock').hidden) { LK.alterando = false; lkMostrar('entrar'); }
+});
+lkMostrar(lerPin() ? 'entrar' : 'criar');
