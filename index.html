@@ -3,12 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0e0f10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbf8f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121019" media="(prefers-color-scheme: dark)">
 <title>Custos Pessoais</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,20 +29,44 @@
     <div id="dias"></div>
   </section>
 
+  <!-- SIMULADOR -->
+  <section id="tela-sim" class="tela">
+    <h1 class="titulo">Posso gastar? 🤔</h1>
+    <p class="hint">Simule uma compra sem salvar e veja se o saldo aguenta.</p>
+    <div id="sim-limite"></div>
+    <form id="sim" class="cartao-bloco form">
+      <div class="seg" role="radiogroup">
+        <label><input type="radio" name="forma" value="saida" checked><span><i>💸</i>À vista</span></label>
+        <label><input type="radio" name="forma" value="cartao"><span><i>💳</i>Cartão</span></label>
+      </div>
+      <input class="valor-grande" inputmode="decimal" name="valor" placeholder="R$ 0,00" autocomplete="off" aria-label="Valor da compra">
+      <label id="sim-campo-cartao" hidden>Cartão<select name="cartao"></select></label>
+      <div class="row2">
+        <label>Quando<input type="date" name="data"></label>
+        <label>Parcelas<select name="parcelas"></select></label>
+      </div>
+      <div class="row2">
+        <label>Descrição<input name="descricao" autocomplete="off" placeholder="opcional"></label>
+        <label>Guardar no mínimo<input inputmode="decimal" name="reserva" value="0"></label>
+      </div>
+    </form>
+    <div id="sim-out"></div>
+  </section>
+
   <!-- PROJEÇÃO -->
   <section id="tela-proj" class="tela">
-    <h1 class="titulo">Projeção</h1>
+    <h1 class="titulo">Projeção 🔮</h1>
     <p class="hint" id="proj-hint"></p>
     <div id="proj"></div>
   </section>
 
   <!-- INVESTIMENTOS -->
   <section id="tela-inv" class="tela">
-    <h1 class="titulo">Investir</h1>
+    <h1 class="titulo">Investir 🌱</h1>
     <div id="inv-resumo"></div>
 
-    <form id="calc" class="bloco form">
-      <h2>Calculadora</h2>
+    <form id="calc" class="cartao-bloco form">
+      <h2>🧮 Calculadora de juros</h2>
       <div class="row2">
         <label>Valor inicial<input inputmode="decimal" name="inicial" value="0"></label>
         <label>Aporte mensal<input inputmode="decimal" name="aporte" value="0"></label>
@@ -66,10 +92,10 @@
 
   <!-- AJUSTES -->
   <section id="tela-cfg" class="tela">
-    <h1 class="titulo">Ajustes</h1>
+    <h1 class="titulo">Ajustes ⚙️</h1>
 
-    <form id="cfg-geral" class="bloco form">
-      <h2>Saldo e recebimentos</h2>
+    <form id="cfg-geral" class="cartao-bloco form">
+      <h2>🏦 Saldo e recebimentos</h2>
       <div class="row2">
         <label>Saldo em<input type="date" name="data" required></label>
         <label>Valor<input inputmode="decimal" name="valor" required></label>
@@ -79,8 +105,8 @@
       <button type="submit" class="primario">Salvar</button>
     </form>
 
-    <div class="bloco">
-      <h2>Cartões</h2>
+    <div class="cartao-bloco">
+      <h2>💳 Cartões</h2>
       <div id="lista-cartoes"></div>
       <form id="form-cartao" class="form">
         <input type="hidden" name="id">
@@ -97,13 +123,13 @@
       </form>
     </div>
 
-    <div class="bloco">
-      <h2>Recorrências</h2>
+    <div class="cartao-bloco">
+      <h2>🔁 Recorrências</h2>
       <div id="lista-rec"></div>
     </div>
 
-    <div class="bloco">
-      <h2>Backup</h2>
+    <div class="cartao-bloco">
+      <h2>💾 Backup</h2>
       <p class="hint">Os dados ficam só neste aparelho. Exporte com frequência.</p>
       <div class="row2">
         <button id="exportar" class="secundario">Exportar</button>
@@ -117,10 +143,11 @@
 <button id="fab" aria-label="Novo lançamento"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
 
 <nav class="tabs">
-  <button data-tela="mes" class="ativa"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Mês</button>
-  <button data-tela="proj"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M5 15l4-4 4 3 6-7"/></svg>Projeção</button>
-  <button data-tela="inv"><svg viewBox="0 0 24 24"><path d="M12 20v-8"/><path d="M12 12c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 14c0-3-2-5-6-5 0 3 2 5 6 5z"/></svg>Investir</button>
-  <button data-tela="cfg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Ajustes</button>
+  <button data-tela="mes" class="ativa"><span class="e">📅</span>Mês</button>
+  <button data-tela="sim"><span class="e">🤔</span>Posso gastar?</button>
+  <button data-tela="proj"><span class="e">🔮</span>Projeção</button>
+  <button data-tela="inv"><span class="e">🌱</span>Investir</button>
+  <button data-tela="cfg"><span class="e">⚙️</span>Ajustes</button>
 </nav>
 
 <!-- Lançamento -->
@@ -131,10 +158,10 @@
       <button type="button" class="x" id="dlg-cancelar" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="seg" role="radiogroup">
-      <label><input type="radio" name="tipo" value="saida" checked><span>Saída</span></label>
-      <label><input type="radio" name="tipo" value="cartao"><span>Cartão</span></label>
-      <label><input type="radio" name="tipo" value="entrada"><span>Entrada</span></label>
-      <label><input type="radio" name="tipo" value="investimento"><span>Investir</span></label>
+      <label><input type="radio" name="tipo" value="saida" checked><span><i>💸</i>Saída</span></label>
+      <label><input type="radio" name="tipo" value="cartao"><span><i>💳</i>Cartão</span></label>
+      <label><input type="radio" name="tipo" value="entrada"><span><i>💰</i>Entrada</span></label>
+      <label><input type="radio" name="tipo" value="investimento"><span><i>🌱</i>Investir</span></label>
     </div>
     <input class="valor-grande" inputmode="decimal" name="valor" placeholder="R$ 0,00" required autocomplete="off" aria-label="Valor">
     <label id="campo-cartao" hidden>Cartão<select name="cartao"></select></label>

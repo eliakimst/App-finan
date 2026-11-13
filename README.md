@@ -29,3 +29,7 @@ Ao registrar um lançamento, o app mostra antes de salvar quando ele sai do sald
 ## Usar
 
 Abra `index.html` servido por HTTP (por exemplo, GitHub Pages) e use "Adicionar à tela inicial" no celular. Os dados ficam salvos só no aparelho (localStorage); use **Ajustes → Exportar** para fazer backup.
+
+## Posso gastar?
+
+Simulador que não salva nada: informe valor, à vista ou cartão, data e parcelas. O app mostra o maior valor que dá para gastar sem o saldo ficar negativo (ou abaixo de um mínimo que você quer guardar) nos próximos 12 meses, o veredito e um gráfico do saldo com e sem a compra. Se gostar, toque em "Registrar esta compra".
