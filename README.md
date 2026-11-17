@@ -47,3 +47,11 @@ Dois cenários na aba Projeção:
 ## Código de acesso
 
 Na primeira abertura o app pede para criar um código de 4 dígitos, pedido de novo a cada abertura e depois de 1 minuto fora do app. Após 5 erros seguidos, o teclado trava por 30 s (dobrando a cada novo erro). Só um hash SHA-256 com sal é salvo. O código impede o acesso pela tela do app, mas **não criptografa** os dados guardados no navegador. "Esqueci o código" apaga os dados do aparelho (é possível importar um backup depois).
+
+## Lançamentos, faturas, parcelas e privacidade
+
+- A tela do mês mostra os lançamentos agregados (entradas, saídas, compras no cartão, investimentos). Tocar abre a lista do mais recente ao mais antigo, com busca e filtros de tipo, período, situação e cartão.
+- Todas as faturas que vencem no mês seguinte aparecem, inclusive zeradas, com o ciclo de compras de cada cartão.
+- Compras no cartão podem ser parceladas (até 48x): informe o valor total; cada parcela entra numa fatura e a última absorve a diferença de centavos.
+- Investir mostra só o total investido e a lista de aportes; cada aporte sai do saldo na data informada.
+- O ícone de olho (ou Ajustes → Ocultar valores) esconde todos os valores.

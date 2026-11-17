@@ -104,30 +104,6 @@
   <section id="tela-inv" class="tela">
     <h1 class="titulo">Investir</h1>
     <div id="inv-resumo"></div>
-
-    <p class="sec-titulo">Calculadora de juros</p>
-    <form id="calc" class="cartao-bloco form">
-      <div class="row2">
-        <label>Valor inicial<input inputmode="decimal" name="inicial" value="0"></label>
-        <label>Aporte mensal<input inputmode="decimal" name="aporte" value="0"></label>
-      </div>
-      <div class="row2">
-        <label>Taxa (%)<input inputmode="decimal" name="taxa" value="1"></label>
-        <label>Período<select name="periodo"><option value="am">ao mês</option><option value="aa">ao ano</option></select></label>
-      </div>
-      <div class="row2">
-        <label>Prazo<input inputmode="numeric" name="prazo" value="12"></label>
-        <label>Unidade<select name="unidade"><option value="m">meses</option><option value="a">anos</option></select></label>
-      </div>
-      <label>Imposto sobre o rendimento (%)<input inputmode="decimal" name="ir" value="0"></label>
-      <p class="hint">Você informa a taxa e o imposto. O app não consulta taxas de mercado; confira os valores atuais com seu banco ou corretora.</p>
-      <div class="chips">
-        <button type="button" class="chip" id="usar-sobra">Aporte = sobra prevista</button>
-        <button type="button" class="chip" id="usar-aportes">Inicial = já investido</button>
-      </div>
-      <button type="submit" class="primario">Calcular</button>
-    </form>
-    <div id="calc-out"></div>
   </section>
 
   <!-- AJUSTES -->
@@ -170,6 +146,7 @@
 
     <p class="sec-titulo">Segurança</p>
     <div class="cartao-bloco">
+      <button class="secundario" id="alternar-oculto" style="margin-bottom:8px">Ocultar valores</button>
       <button class="secundario" id="alterar-pin">Alterar código</button>
       <p class="hint" style="margin-bottom:0">O código impede que outra pessoa abra o app neste aparelho. Ele bloqueia de novo depois de 1 minuto fora do app.</p>
     </div>
@@ -210,12 +187,14 @@
     <input class="valor-grande" inputmode="decimal" name="valor" placeholder="R$ 0,00" required autocomplete="off" aria-label="Valor">
     <div class="cartao-bloco" style="margin-bottom:12px">
       <label id="campo-cartao" hidden>Cartão<select name="cartao"></select></label>
+      <label id="campo-parcelas" hidden>Parcelas<select name="parcelas"></select></label>
+      <p class="hint" id="parc-info" style="margin-top:-6px"></p>
       <div class="row2">
         <label>Data<input type="date" name="data" required></label>
         <label>Descrição<input name="descricao" autocomplete="off" placeholder="opcional"></label>
       </div>
       <label class="check" id="campo-previsto">Valor previsto (pode mudar)<input type="checkbox" name="previsto"><span class="sw"></span></label>
-      <label class="check" style="margin-bottom:0">Repetir todo mês<input type="checkbox" name="recorrente"><span class="sw"></span></label>
+      <label class="check" id="campo-recorrente" style="margin-bottom:0">Repetir todo mês<input type="checkbox" name="recorrente"><span class="sw"></span></label>
       <p class="hint" id="nota-rec-prev" hidden>Entradas e saídas que se repetem entram como previstas. No dia, confirme o valor real.</p>
       <label id="campo-fim" hidden style="margin-top:10px;margin-bottom:0">Até (opcional)<input type="month" name="fim"></label>
     </div>
@@ -247,6 +226,31 @@
     <p class="hint" id="conf-zero" style="text-align:center">Valor 0 = não houve pagamento neste mês.</p>
     <button type="submit" class="primario">Confirmar</button>
   </form>
+</dialog>
+
+<!-- Lista de lançamentos -->
+<dialog id="dlg-lista">
+  <div class="form">
+    <div class="dlg-head">
+      <h2>Lançamentos</h2>
+      <button type="button" class="x" id="lista-fechar" aria-label="Fechar" autofocus><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <input type="search" id="lista-busca" placeholder="Buscar descrição" autocomplete="off" style="margin:0 0 12px">
+    <div class="seg" role="radiogroup" id="lista-tipo">
+      <label><input type="radio" name="ltipo" value="todos" checked><span>Todos</span></label>
+      <label><input type="radio" name="ltipo" value="entrada"><span>Entradas</span></label>
+      <label><input type="radio" name="ltipo" value="saida"><span>Saídas</span></label>
+      <label><input type="radio" name="ltipo" value="cartao"><span>Cartão</span></label>
+      <label><input type="radio" name="ltipo" value="investimento"><span>Investir</span></label>
+    </div>
+    <div class="row2">
+      <label>Período<select id="lista-periodo"></select></label>
+      <label>Situação<select id="lista-status"><option value="">Todas</option><option value="previsto">Previstas</option><option value="ok">Confirmadas</option></select></label>
+    </div>
+    <label id="lista-campo-cartao" hidden>Cartão<select id="lista-cartao"></select></label>
+    <p class="hint" id="lista-resumo" style="margin:0 4px 8px"></p>
+    <div class="cartao-bloco" id="lista-itens" style="padding-top:2px;padding-bottom:2px"></div>
+  </div>
 </dialog>
 
 <script src="app.js"></script>

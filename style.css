@@ -284,3 +284,21 @@ html, body { overflow-x: hidden; }
 .hero.sobra .sub { font-size: 13px; }
 .mes-nav h1 { font-size: 22px; }
 @media (max-width: 359px) { .hoje-topo span { font-size: 28px; } .mes-nav h1 { font-size: 20px; } }
+
+/* ---------- folhas ocupam a área visível (teclado do iPhone) ---------- */
+dialog {
+  position: fixed; left: 0; right: 0; bottom: auto; margin: 0 auto;
+  top: calc(var(--vvt, 0px) + max(env(safe-area-inset-top), 10px));
+  height: calc(var(--vvh, 100dvh) - max(env(safe-area-inset-top), 10px));
+  max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+/* setinha das linhas clicáveis */
+.chev { color: var(--cinza); opacity: .6; margin-left: 8px; font-size: 20px; font-weight: 400; vertical-align: -1px; }
+/* botão de privacidade */
+.hoje-topo small { flex: 1; text-align: right; }
+.olho { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--tint); background: var(--sup); align-self: center; }
+.olho svg { width: 20px; height: 20px; }
+/* busca */
+.form input[type="search"] { -webkit-appearance: none; appearance: none; }
+#lista-tipo span { font-size: 12px; padding: 7px 2px; }
