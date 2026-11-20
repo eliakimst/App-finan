@@ -989,9 +989,21 @@ function render() {
 }
 render();
 
+const VERSAO = '2026.11.20-8';
+$('#versao-app').textContent = VERSAO;
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').then(reg => reg.update()).catch(() => {});
 }
+// Força baixar os arquivos novos: atualiza o service worker, limpa o cache
+// dos arquivos do app (não os dados, que ficam no localStorage) e recarrega.
+$('#atualizar-app').onclick = async () => {
+  const b = $('#atualizar-app'); b.textContent = 'Atualizando…'; b.disabled = true;
+  try {
+    if ('serviceWorker' in navigator) { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); }
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k);
+  } catch {}
+  location.reload();
+};
 
 /* ---------------- Código de acesso ----------------
    Guarda só um hash (SHA-256 com sal) do código. Impede que outra pessoa

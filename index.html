@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body class="travado">
 
@@ -151,6 +151,13 @@
       <p class="hint" style="margin-bottom:0">O código impede que outra pessoa abra o app neste aparelho. Ele bloqueia de novo depois de 1 minuto fora do app.</p>
     </div>
 
+    <p class="sec-titulo">Aplicativo</p>
+    <div class="cartao-bloco">
+      <div class="linha" style="min-height:40px;padding-top:4px"><div class="esq"><div class="t">Versão</div></div><div class="dir" id="versao-app" style="color:var(--muted)"></div></div>
+      <button class="secundario" id="atualizar-app">Atualizar app</button>
+      <p class="hint" style="margin-bottom:0">Baixa a versão mais recente publicada. Seus dados não são apagados.</p>
+    </div>
+
     <p class="sec-titulo">Backup</p>
     <div class="cartao-bloco">
       <p class="hint" style="margin-top:0">Os dados ficam só neste aparelho. Exporte com frequência.</p>
@@ -253,6 +260,6 @@
   </div>
 </dialog>
 
-<script src="app.js"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
