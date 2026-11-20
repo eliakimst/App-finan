@@ -302,3 +302,13 @@ dialog {
 /* busca */
 .form input[type="search"] { -webkit-appearance: none; appearance: none; }
 #lista-tipo span { font-size: 12px; padding: 7px 2px; }
+
+/* detalhe da sobra */
+.det-sobra { margin-top: 10px; border-top: .5px solid var(--sep); padding-top: 8px; font-size: 13px; }
+.det-sobra summary { color: var(--tint); cursor: pointer; font-weight: 600; list-style: none; }
+.det-sobra summary::-webkit-details-marker { display: none; }
+.det-sobra summary::after { content: " ›"; }
+.det-sobra[open] summary::after { content: " ⌄"; }
+.det-sobra .l { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; color: var(--muted); }
+.det-sobra .l b { color: var(--txt); font-weight: 500; }
+.det-sobra .l:nth-last-of-type(1) b { font-weight: 700; }

@@ -210,6 +210,34 @@ const EMOJI = {
 const ICON_OLHO = SVGI('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>');
 const ICON_OLHO_FECHADO = SVGI('<path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>');
 function alternarOculto() { S.config.oculto = !S.config.oculto; salvar(); }
+// Mostra como a sobra é calculada: saldo no fim do mês + entradas − saídas − faturas até a data da sobra
+function detalheSobra(C, fim, sobraD, na, nm) {
+  const base = C.saldoAte(fim); if (base == null) return '';
+  let ent = 0, sai = 0, inv = 0; const fats = []; const depois = [];
+  for (const [d, o] of C.porDia) {
+    if (d <= fim) continue;
+    for (const [c, v] of Object.entries(o.faturas)) (d <= sobraD ? fats : depois).push({ d, c, v });
+    if (d > sobraD) continue;
+    for (const l of o.itens) {
+      if (l.tipo === 'entrada') ent += l.valor;
+      else if (l.tipo === 'saida') sai += l.valor;
+      else if (l.tipo === 'investimento') inv += l.valor;
+    }
+  }
+  const ymP = ymStr(na, nm);
+  const tarde = depois.filter(f => f.d.startsWith(ymP)).sort((x, y) => x.d.localeCompare(y.d));
+  const L = (t, v, cls = '') => `<div class="l"><span>${t}</span><b class="num ${cls}">${v}</b></div>`;
+  const ate = dm(sobraD);
+  return `<details class="det-sobra"><summary>Como é calculada</summary>
+    ${L(`Saldo em ${dm(fim)}`, fmt(base))}
+    ${ent ? L(`Entradas até ${ate}`, '+' + fmt(ent), 'pos') : ''}
+    ${sai ? L(`Saídas até ${ate}`, '−' + fmt(sai)) : ''}
+    ${inv ? L(`Investimentos até ${ate}`, '−' + fmt(inv)) : ''}
+    ${fats.sort((x, y) => x.d.localeCompare(y.d)).map(f => L(`Fatura ${esc(nomeCartao(f.c))} (${dm(f.d)})`, '−' + fmt(f.v))).join('')}
+    ${L('Sobra', fmt(C.saldoAte(sobraD)))}
+    ${tarde.length ? `<p class="hint" style="margin:8px 0 0">Vencem depois dos recebimentos do dia ${S.config.diaReceb} e saem do saldo no mês: ${tarde.map(f => `${esc(nomeCartao(f.c))} ${dm(f.d)} (${fmt(f.v)})`).join(', ')}.</p>` : ''}
+  </details>`;
+}
 function humor(v) {
   if (v < 0) return { c: 'ruim', t: 'Vai faltar', st: 'Negativo' };
   if (v < 500) return { c: 'apertado', t: 'Sobra para aplicar', st: 'Apertado' };
@@ -259,6 +287,7 @@ function renderMes() {
       <div class="topo"><small>${h.t}</small><span class="status">${h.st}</span></div>
       <div class="valor num">${fmt(Math.abs(sobra))}</div>
       <div class="sub">em ${Number(sobraD.slice(8))} de ${nomeProx}, depois das contas do início do mês</div>
+      ${detalheSobra(C, fim, sobraD, na, nm)}
     </div>`;
   }
 
