@@ -31,7 +31,7 @@ const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julh
 const SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 const dm = d => `${d.slice(8)}/${d.slice(5, 7)}`;
 const mesCurto = (a, m) => `${MESES[m - 1].slice(0, 3)}/${String(a).slice(2)}`;
-const ROTULO = { entrada: 'Entrada', saida: 'Saída', cartao: 'Cartão', investimento: 'Investimento' };
+const ROTULO = { entrada: 'Entrada', saida: 'Saída', cartao: 'Cartão', investimento: 'Investimento', fatura: 'Fatura' };
 
 function parseNum(s) {
   s = String(s ?? '').trim().replace(/[R$\s]/g, '');
@@ -292,11 +292,7 @@ function renderMes() {
   const fats = S.cartoes.map(c => {
     const venc = `${ymProx}-${pad(Math.min(c.vence, diasNoMes(na, nm)))}`;
     const v = C.porDia.get(venc)?.faturas[c.id] || 0;
-    const [fa, fm] = c.vence > Math.min(c.fecha, diasNoMes(na, nm)) ? [na, nm] : addMes(na, nm, -1);
-    const fech = `${ymStr(fa, fm)}-${pad(Math.min(c.fecha, diasNoMes(fa, fm)))}`;
-    const [pa, pm] = addMes(fa, fm, -1);
-    const iniC = addDias(`${ymStr(pa, pm)}-${pad(Math.min(c.fecha, diasNoMes(pa, pm)))}`, 1);
-    return { c, venc, v, iniC, fech };
+    return { c, venc, v, ...cicloFatura(c, venc) };
   }).sort((x, y) => x.venc.localeCompare(y.venc));
   $('#faturas').innerHTML = fats.length ? `<p class="sec-titulo">Faturas de ${nomeProx}</p><div class="cartao-bloco" style="padding-top:2px;padding-bottom:2px">${fats.map(f => `
       <div class="linha click" data-fat="${esc(f.c.id)}" data-de="${f.iniC}" data-ate="${f.fech}"><div class="esq"><span class="av cartao">${EMOJI.cartao}</span><div style="min-width:0"><div class="t">${esc(f.c.nome)}</div><small>compras ${dm(f.iniC)} a ${dm(f.fech)} · vence ${dm(f.venc)}</small></div></div>
@@ -306,19 +302,49 @@ function renderMes() {
   // 2/3. lançamentos agregados por tipo; ao tocar, lista do mais recente ao mais antigo
   const antes = ini > fim ? `<div class="info">Histórico: este mês é anterior ao saldo inicial (${dm(ini)}/${ini.slice(0, 4)}), então não afeta o saldo.</div>` : '';
   const doMes = C.lancs.filter(l => l.data.startsWith(ym));
+  const fatMes = pagamentosFatura(C).filter(l => l.data.startsWith(ym));
+  const somaV = arr => arr.reduce((x, l) => x + l.valor, 0);
   const grupos = [['entrada', 'Entradas'], ['saida', 'Saídas'], ['cartao', 'Compras no cartão'], ['investimento', 'Investimentos']]
-    .map(([t, nome]) => { const it = doMes.filter(l => l.tipo === t); return { t, nome, n: it.length, v: it.reduce((x, l) => x + l.valor, 0) }; });
+    .map(([t, nome]) => {
+      const it = doMes.filter(l => l.tipo === t);
+      const n = it.length, txt = `${n} lançamento${n === 1 ? '' : 's'}`;
+      if (t !== 'saida') return { t, nome, txt, v: somaV(it) };
+      // saídas = à vista + pagamento das faturas que vencem no mês
+      return { t, nome, txt: fatMes.length ? `${txt} + ${fatMes.length} fatura${fatMes.length === 1 ? '' : 's'} (${fmt(somaV(fatMes))})` : txt, v: somaV(it) + somaV(fatMes) };
+    });
   $('#dias').innerHTML = antes + `<p class="sec-titulo">Lançamentos de ${MESES[verM - 1]}</p>
     <div class="cartao-bloco" style="padding-top:2px;padding-bottom:2px">
-      ${grupos.map(g => `<div class="linha click" data-grupo="${g.t}"><div class="esq"><span class="av ${g.t}">${EMOJI[g.t]}</span><div style="min-width:0"><div class="t">${g.nome}</div><small>${g.n} lançamento${g.n === 1 ? '' : 's'}</small></div></div>
+      ${grupos.map(g => `<div class="linha click" data-grupo="${g.t}"><div class="esq"><span class="av ${g.t}">${EMOJI[g.t]}</span><div style="min-width:0"><div class="t">${g.nome}</div><small>${g.txt}</small></div></div>
         <div class="dir num ${g.t === 'entrada' ? 'pos' : ''}">${fmt(g.v)}<span class="chev">›</span></div></div>`).join('')}
       <div class="linha click" data-grupo="todos"><div class="esq"><span class="av previsto">${SVGI('<path d="M5 7h14M5 12h14M5 17h14"/>')}</span><div class="t">Ver todos</div></div><div class="dir"><span class="chev">›</span></div></div>
     </div>`;
   $$('[data-grupo]').forEach(el => el.onclick = () => abrirLista({ tipo: el.dataset.grupo, periodo: 'mes' }));
 }
 
+// Período de compras da fatura do cartão c que vence em `venc`
+function cicloFatura(c, venc) {
+  const [na, nm] = venc.split('-').map(Number);
+  const [fa, fm] = c.vence > Math.min(c.fecha, diasNoMes(na, nm)) ? [na, nm] : addMes(na, nm, -1);
+  const fech = `${ymStr(fa, fm)}-${pad(Math.min(c.fecha, diasNoMes(fa, fm)))}`;
+  const [pa, pm] = addMes(fa, fm, -1);
+  return { iniC: addDias(`${ymStr(pa, pm)}-${pad(Math.min(c.fecha, diasNoMes(pa, pm)))}`, 1), fech };
+}
+// Pagamentos de fatura (calculados a partir das compras) como itens de lista
+function pagamentosFatura(C) {
+  const out = [];
+  for (const [d, o] of C.porDia) for (const [c, v] of Object.entries(o.faturas))
+    out.push({ id: `fat:${c}:${d}`, tipo: 'fatura', cartao: c, valor: v, data: d, descricao: `Fatura ${nomeCartao(c)}` });
+  return out;
+}
+
 // Linha de um lançamento (usada nas listas)
 function htmlLanc(l) {
+  if (l.tipo === 'fatura') {
+    const [a, m, d] = l.data.split('-').map(Number);
+    return `<div class="linha click" data-fatura="${esc(l.cartao)}" data-venc="${l.data}">
+      <div class="esq"><span class="av fatura">${EMOJI.fatura}</span><div style="min-width:0"><div class="t">${esc(l.descricao)}</div><small>${SEM[new Date(a, m - 1, d).getDay()]}, ${dm(l.data)} · pagamento do cartão</small></div></div>
+      <div class="dir num">−${fmt(l.valor)}<span class="chev">›</span></div></div>`;
+  }
   const sinal = l.tipo === 'entrada' ? '+' : l.tipo === 'cartao' ? '' : '−';
   const cart = S.cartoes.find(c => c.id === l.cartao);
   const prev = (l.tipo === 'saida' || l.tipo === 'entrada') && l.previsto;
@@ -335,6 +361,11 @@ function htmlLanc(l) {
     <div class="dir num ${l.tipo === 'entrada' || l.tipo === 'investimento' ? 'pos' : ''}" style="${l.tipo === 'cartao' ? 'color:var(--roxo)' : ''}">${sinal}${fmt(l.valor)}${prev ? `<button class="mini" data-conf="${esc(l.id)}">Confirmar</button>` : ''}</div></div>`;
 }
 function ligarLancs(raiz, lista) {
+  raiz.querySelectorAll('[data-fatura]').forEach(el => el.onclick = () => {
+    const c = S.cartoes.find(x => x.id === el.dataset.fatura); if (!c) return;
+    const { iniC, fech } = cicloFatura(c, el.dataset.venc);
+    abrirLista({ tipo: 'cartao', cartao: c.id, periodo: 'ciclo', de: iniC, ate: fech });
+  });
   raiz.querySelectorAll('.linha.click[data-id]').forEach(el => el.onclick = () => abrirLanc(el.dataset.id, lista));
   raiz.querySelectorAll('[data-conf]').forEach(b => b.onclick = e => { e.stopPropagation(); abrirConfirmar(b.dataset.conf, lista); });
 }
@@ -367,11 +398,12 @@ function renderLista() {
   const ate = ymStr(LS.a, LS.m) > ymStr(ha, hm) ? [LS.a, LS.m] : [ha, hm];
   const C = calcular(S, ate[0], ate[1]);
   const hoje = hojeStr(), ymL = ymStr(LS.a, LS.m);
-  let L = C.lancs.filter(l => {
+  const comFaturas = LS.tipo === 'todos' || LS.tipo === 'saida';
+  let L = [...C.lancs, ...(comFaturas ? pagamentosFatura(C) : [])].filter(l => {
     if (LS.periodo === 'mes' && !l.data.startsWith(ymL)) return false;
     if (LS.periodo === 'ate-hoje' && l.data > hoje) return false;
     if (LS.periodo === 'ciclo' && (l.data < LS.de || l.data > LS.ate)) return false;
-    if (LS.tipo !== 'todos' && l.tipo !== LS.tipo) return false;
+    if (LS.tipo !== 'todos' && l.tipo !== LS.tipo && !(LS.tipo === 'saida' && l.tipo === 'fatura')) return false;
     if (LS.tipo === 'cartao' && LS.cartao && l.cartao !== LS.cartao) return false;
     const prev = (l.tipo === 'saida' || l.tipo === 'entrada') && l.previsto;
     if (LS.status === 'previsto' && !prev) return false;
@@ -381,7 +413,9 @@ function renderLista() {
   });
   L.sort((x, y) => y.data.localeCompare(x.data) || String(y.id).localeCompare(String(x.id)));
   const ent = L.filter(l => l.tipo === 'entrada').reduce((x, l) => x + l.valor, 0);
-  const sai = L.filter(l => l.tipo !== 'entrada').reduce((x, l) => x + l.valor, 0);
+  // compras no cartão não somam junto com as faturas (seriam contadas duas vezes)
+  const temFat = L.some(l => l.tipo === 'fatura');
+  const sai = L.filter(l => l.tipo !== 'entrada' && !(temFat && l.tipo === 'cartao')).reduce((x, l) => x + l.valor, 0);
   $('#lista-resumo').innerHTML = `${L.length} lançamento${L.length === 1 ? '' : 's'}` + (ent ? ` · entradas <b class="pos">${fmt(ent)}</b>` : '') + (sai ? ` · saídas <b>${fmt(sai)}</b>` : '');
   const box = $('#lista-itens');
   box.innerHTML = L.length ? L.map(htmlLanc).join('') : '<div class="vazio">Nada encontrado com esses filtros.</div>';
