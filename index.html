@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body class="travado">
 
@@ -117,6 +117,7 @@
         <label>Valor<input inputmode="decimal" name="valor" required></label>
       </div>
       <label>Recebimentos começam no dia<input inputmode="numeric" name="diaReceb" required></label>
+      <label>Limite total dos cartões por mês<input inputmode="decimal" name="limiteCartoes" placeholder="sem limite"></label>
       <p class="hint">A “sobra” é o saldo no dia anterior a este, depois de pagar as contas do início do mês.</p>
       <button type="submit" class="primario">Salvar</button>
     </form>
@@ -131,6 +132,7 @@
           <label>Fecha dia<input inputmode="numeric" name="fecha" value="31" required></label>
           <label>Vence dia<input inputmode="numeric" name="vence" value="10" required></label>
         </div>
+        <label>Limite de gastos por fatura (opcional)<input inputmode="decimal" name="limite" placeholder="sem limite"></label>
         <p class="hint">Compras até o dia de fechamento entram na fatura que vence no mês seguinte. Fechamento 31 = último dia do mês.</p>
         <div class="row2">
           <button type="button" class="secundario" id="cartao-cancelar" hidden>Cancelar</button>
@@ -260,6 +262,6 @@
   </div>
 </dialog>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

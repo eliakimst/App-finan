@@ -55,3 +55,7 @@ Na primeira abertura o app pede para criar um código de 4 dígitos, pedido de n
 - Compras no cartão podem ser parceladas (até 48x): informe o valor total; cada parcela entra numa fatura e a última absorve a diferença de centavos.
 - Investir mostra só o total investido e a lista de aportes; cada aporte sai do saldo na data informada.
 - O ícone de olho (ou Ajustes → Ocultar valores) esconde todos os valores.
+
+## Limites de cartão
+
+Avisos visuais (sem bloquear) quando a fatura passa do limite: LATAM R$ 2.500, C6 R$ 4.500 e total dos cartões R$ 8.000 por mês, editáveis em Ajustes. O limite vale por fatura: os gastos de um mês são as faturas que vencem no mês seguinte. A barra fica verde até 80%, laranja de 80% a 100% e vermelha acima do limite.

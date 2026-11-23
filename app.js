@@ -59,6 +59,15 @@ function estadoPadrao() {
   };
 }
 function migrar(s) {
+  // limites de gasto no cartão (aviso, sem bloquear) — aplicados uma única vez
+  if (!s.config?.limitesIniciais) {
+    s.config = { ...(s.config || {}), limitesIniciais: true, limiteCartoes: s.config?.limiteCartoes ?? 8000 };
+    for (const c of s.cartoes || []) {
+      const n = (c.nome || '').trim().toUpperCase();
+      if (c.limite == null && n === 'LATAM') c.limite = 2500;
+      if (c.limite == null && n === 'C6') c.limite = 4500;
+    }
+  }
   s.config = { diaReceb: 5, ...(s.config || {}) };
   s.recs = s.recs || [];
   if (!s.cartoes.some(c => c.nome.trim().toUpperCase() === 'CAIXA')) s.cartoes.push({ ...CARTOES_PADRAO[2] });
@@ -323,9 +332,18 @@ function renderMes() {
     const v = C.porDia.get(venc)?.faturas[c.id] || 0;
     return { c, venc, v, ...cicloFatura(c, venc) };
   }).sort((x, y) => x.venc.localeCompare(y.venc));
-  $('#faturas').innerHTML = fats.length ? `<p class="sec-titulo">Faturas de ${nomeProx}</p><div class="cartao-bloco" style="padding-top:2px;padding-bottom:2px">${fats.map(f => `
-      <div class="linha click" data-fat="${esc(f.c.id)}" data-de="${f.iniC}" data-ate="${f.fech}"><div class="esq"><span class="av cartao">${EMOJI.cartao}</span><div style="min-width:0"><div class="t">${esc(f.c.nome)}</div><small>compras ${dm(f.iniC)} a ${dm(f.fech)} · vence ${dm(f.venc)}</small></div></div>
-      <div class="dir num">${fmt(f.v)}<span class="chev">›</span></div></div>`).join('')}</div>` : '';
+  const uso = usoCartoes(C, na, nm);
+  const estourados = fats.filter(f => f.c.limite > 0 && f.v > f.c.limite + 0.004);
+  const blocoLimite = uso.limTotal ? `<div class="cartao-bloco limites ${nivel(uso.total, uso.limTotal)}">
+      <div class="lim-topo"><span>Cartões · gastos de ${MESES[verM - 1]}</span><b class="num">${fmt(uso.total)}</b></div>
+      ${barraLimite(uso.total, uso.limTotal)}
+      <div class="lim-rodape">${textoLimite(uso.total, uso.limTotal)}<span>faturas de ${nomeProx}</span></div>
+      ${estourados.length ? `<p class="lim-aviso">Acima do limite: ${estourados.map(f => `${esc(f.c.nome)} (+${fmt(f.v - f.c.limite)})`).join(', ')}</p>` : ''}
+    </div>` : '';
+  $('#faturas').innerHTML = fats.length ? `<p class="sec-titulo">Faturas de ${nomeProx}</p>${blocoLimite}<div class="cartao-bloco" style="padding-top:2px;padding-bottom:2px">${fats.map(f => `
+      <div class="linha click ${f.c.limite > 0 ? 'com-lim' : ''}" data-fat="${esc(f.c.id)}" data-de="${f.iniC}" data-ate="${f.fech}"><div class="esq"><span class="av cartao">${EMOJI.cartao}</span><div style="min-width:0;flex:1"><div class="t">${esc(f.c.nome)}</div><small>compras ${dm(f.iniC)} a ${dm(f.fech)} · vence ${dm(f.venc)}</small>
+        ${f.c.limite > 0 ? `${barraLimite(f.v, f.c.limite)}<small>${textoLimite(f.v, f.c.limite)}</small>` : ''}</div></div>
+      <div class="dir num ${nivel(f.v, f.c.limite) === 'estouro' ? 'neg' : ''}">${fmt(f.v)}<span class="chev">›</span></div></div>`).join('')}</div>` : '';
   $$('[data-fat]').forEach(el => el.onclick = () => abrirLista({ tipo: 'cartao', cartao: el.dataset.fat, periodo: 'ciclo', de: el.dataset.de, ate: el.dataset.ate }));
 
   // 2/3. lançamentos agregados por tipo; ao tocar, lista do mais recente ao mais antigo
@@ -348,6 +366,30 @@ function renderMes() {
       <div class="linha click" data-grupo="todos"><div class="esq"><span class="av previsto">${SVGI('<path d="M5 7h14M5 12h14M5 17h14"/>')}</span><div class="t">Ver todos</div></div><div class="dir"><span class="chev">›</span></div></div>
     </div>`;
   $$('[data-grupo]').forEach(el => el.onclick = () => abrirLista({ tipo: el.dataset.grupo, periodo: 'mes' }));
+}
+
+/* Limites de cartão: compara as faturas que vencem num mês com os limites.
+   Faturas que vencem em (a, m) = compras do ciclo anterior (o "mês de gasto"). */
+function usoCartoes(C, a, m) {
+  const ym = ymStr(a, m);
+  const cards = S.cartoes.map(c => {
+    const venc = `${ym}-${pad(Math.min(c.vence, diasNoMes(a, m)))}`;
+    return { c, venc, v: C.porDia.get(venc)?.faturas[c.id] || 0, lim: c.limite > 0 ? c.limite : null };
+  });
+  const total = cards.reduce((x, k) => x + k.v, 0);
+  return { cards, total, limTotal: S.config.limiteCartoes > 0 ? S.config.limiteCartoes : null };
+}
+function nivel(v, lim) { if (!lim) return ''; const r = v / lim; return r > 1 + 1e-9 ? 'estouro' : r >= 0.8 ? 'alerta' : 'ok'; }
+function barraLimite(v, lim) {
+  if (!lim) return '';
+  const pct = Math.min(100, v / lim * 100);
+  return `<div class="lim-barra"><i class="${nivel(v, lim)}" style="width:${pct.toFixed(1)}%"></i></div>`;
+}
+function textoLimite(v, lim) {
+  if (!lim) return '';
+  const d = v - lim;
+  return d > 0.004 ? `<span class="lim-txt estouro">${fmt(d)} acima do limite de ${fmt(lim)}</span>`
+    : `<span class="lim-txt ${nivel(v, lim)}">${fmt(-d)} livres de ${fmt(lim)}</span>`;
 }
 
 // Período de compras da fatura do cartão c que vence em `venc`
@@ -535,6 +577,7 @@ function atualizarSim() {
         <div class="l"><span>${p.forma === 'cartao' ? 'Primeira fatura' : 'Sai do saldo em'}</span><b>${dm(debito)}</b></div>
         ${p.n > 1 ? `<div class="l"><span>Parcelas</span><b class="num">${p.n}x de ${fmt(p.valor / p.n)}</b></div>` : ''}
         <div class="l"><span>Sobra ${dm(sd)}</span><b class="num">${fmt(A.saldoAte(sd))} → <span class="${B.saldoAte(sd) < 0 ? 'neg' : ''}">${fmt(B.saldoAte(sd))}</span></b></div>
+        ${p.forma === 'cartao' && cart ? avisoLimite(A, B, cart, debito) : ''}
       </div>
       <svg class="graf" viewBox="0 0 ${W} ${H}" role="img" aria-label="Saldo antes e depois da compra" style="stroke:none">
         <line x1="${P}" x2="${W - P}" y1="${y(0)}" y2="${y(0)}" stroke="var(--neg)" stroke-width="1.5" stroke-dasharray="4 5" opacity=".6"/>
@@ -695,14 +738,15 @@ function renderCfg() {
   f.data.value = S.saldoInicial.data;
   f.valor.value = brNum(S.saldoInicial.valor);
   f.diaReceb.value = S.config.diaReceb;
+  f.limiteCartoes.value = S.config.limiteCartoes > 0 ? brNum(S.config.limiteCartoes) : '';
 
   $('#lista-cartoes').innerHTML = S.cartoes.map(c => `
     <div class="linha click" data-cart="${esc(c.id)}"><div class="esq"><span class="av cartao">${EMOJI.cartao}</span><div><div class="t">${esc(c.nome)}</div>
-    <small>${c.fecha >= 31 ? 'fecha no fim do mês' : `compras de ${c.fecha + 1} a ${c.fecha}`} · vence dia ${c.vence}</small></div></div>
+    <small>${c.fecha >= 31 ? 'fecha no fim do mês' : `compras de ${c.fecha + 1} a ${c.fecha}`} · vence dia ${c.vence}${c.limite > 0 ? ` · limite ${fmt(c.limite)}` : ''}</small></div></div>
     <div class="dir" style="color:var(--muted)">›</div></div>`).join('') || '<p class="hint">Nenhum cartão.</p>';
   $$('[data-cart]').forEach(el => el.onclick = () => {
     const c = S.cartoes.find(x => x.id === el.dataset.cart);
-    fc.id.value = c.id; fc.nome.value = c.nome; fc.fecha.value = c.fecha; fc.vence.value = c.vence;
+    fc.id.value = c.id; fc.nome.value = c.nome; fc.fecha.value = c.fecha; fc.vence.value = c.vence; fc.limite.value = c.limite > 0 ? brNum(c.limite) : '';
     $('#cartao-salvar').textContent = 'Salvar cartão'; $('#cartao-cancelar').hidden = false;
     $('#cartao-cancelar').textContent = 'Remover';
     $('#cartao-cancelar').onclick = () => removerCartao(c.id);
@@ -728,13 +772,16 @@ $('#cfg-geral').onsubmit = e => {
   if (!(r >= 1 && r <= 28)) return alert('Dia de recebimento deve estar entre 1 e 28');
   S.saldoInicial = { data: f.data.value, valor: v };
   S.config.diaReceb = r;
+  const lt = parseNum(f.limiteCartoes.value);
+  S.config.limiteCartoes = lt > 0 ? lt : 0;
   salvar();
 };
 fc.onsubmit = e => {
   e.preventDefault();
   const fecha = parseInt(fc.fecha.value), vence = parseInt(fc.vence.value);
   if (!(fecha >= 1 && fecha <= 31 && vence >= 1 && vence <= 31)) return alert('Dias devem estar entre 1 e 31');
-  const dados = { nome: fc.nome.value.trim(), fecha, vence };
+  const lim = parseNum(fc.limite.value);
+  const dados = { nome: fc.nome.value.trim(), fecha, vence, limite: lim > 0 ? lim : 0 };
   const ex = S.cartoes.find(c => c.id === fc.id.value);
   if (ex) Object.assign(ex, dados); else S.cartoes.push({ id: uid(), ...dados });
   resetCartaoForm(); salvar();
@@ -794,6 +841,20 @@ function estadoDoForm() {
   return { st, base, recAnt };
 }
 
+// Linhas de aviso de limite para uma compra no cartão (fatura que vence em `venc`)
+function avisoLimite(A, B, cartao, venc) {
+  const [a, m] = venc.split('-').map(Number);
+  const ua = usoCartoes(A, a, m), ub = usoCartoes(B, a, m);
+  const ka = ua.cards.find(k => k.c.id === cartao.id), kb = ub.cards.find(k => k.c.id === cartao.id);
+  const linhas = [];
+  if (kb?.lim) linhas.push(`<div class="l"><span>Fatura ${esc(cartao.nome)} ${dm(kb.venc)}</span><b class="num ${nivel(kb.v, kb.lim) === 'estouro' ? 'neg' : ''}">${fmt(kb.v)} / ${fmt(kb.lim)}</b></div>${barraLimite(kb.v, kb.lim)}`);
+  if (ub.limTotal) linhas.push(`<div class="l"><span>Total cartões · faturas de ${MESES[m - 1].slice(0, 3)}</span><b class="num ${nivel(ub.total, ub.limTotal) === 'estouro' ? 'neg' : ''}">${fmt(ub.total)} / ${fmt(ub.limTotal)}</b></div>${barraLimite(ub.total, ub.limTotal)}`);
+  const avisos = [];
+  if (kb?.lim && kb.v > kb.lim + 0.004) avisos.push(ka.v > ka.lim + 0.004 ? `${esc(cartao.nome)} já estava acima do limite` : `Esta compra passa o limite do ${esc(cartao.nome)}`);
+  if (ub.limTotal && ub.total > ub.limTotal + 0.004) avisos.push(ua.total > ua.limTotal + 0.004 ? 'o total dos cartões já estava acima de ' + fmt(ub.limTotal) : 'o total dos cartões passa de ' + fmt(ub.limTotal));
+  const txtAviso = avisos.join('; '); 
+  return linhas.length ? `<div class="lim-impacto">${avisos.length ? `<p class="lim-aviso">${txtAviso.charAt(0).toUpperCase() + txtAviso.slice(1)}.</p>` : ''}${linhas.join('')}</div>` : '';
+}
 function atualizarImpacto() {
   $('#campo-cartao').hidden = fl.tipo.value !== 'cartao';
   const nP = Number(fl.parcelas.value) || 1;
@@ -828,6 +889,7 @@ function atualizarImpacto() {
   const antesIni = fl.data.value < S.saldoInicial.data;
   $('#impacto').innerHTML = `<div class="impacto ${nb.neg ? 'ruim' : ''}">
     <div class="tit">${tit}</div>
+    ${base.tipo === 'cartao' && cartao ? avisoLimite(A, B, cartao, debito) : ''}
     ${antesIni ? `<div class="l" style="color:var(--laranja)"><span>Data anterior ao saldo inicial (${dm(S.saldoInicial.data)}): não altera o saldo.</span></div>` : ''}
     ${sa != null && Math.abs(sa - sb) > 0.004 ? `<div class="l"><span>Saldo atual</span><b class="num">${fmt(sa)} → <span class="${sb < 0 ? 'neg' : ''}">${fmt(sb)}</span></b></div>` : ''}
     <div class="l"><span>${base.tipo === 'cartao' ? 'Fatura vence' : base.tipo === 'entrada' ? 'Entra em' : 'Sai em'}</span><b>${dm(debito)}</b></div>
@@ -989,7 +1051,7 @@ function render() {
 }
 render();
 
-const VERSAO = '2026.11.20-8';
+const VERSAO = '2026.11.23-9';
 $('#versao-app').textContent = VERSAO;
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').then(reg => reg.update()).catch(() => {});
